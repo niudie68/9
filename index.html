@@ -1,1 +1,1916 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>毎日の炒め物・食材組み合わせ＆レシピアシスタント</title>
+  <!-- Tailwind CSS の読み込み -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts Inter & Noto Sans JP の読み込み -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Noto Sans JP"', 'Inter', 'system-ui', 'sans-serif'],
+          },
+          colors: {
+            kitchen: {
+              bg: '#FAF8F5',
+              card: '#FFFFFF',
+              primary: '#1E5631',     // 深緑（メインカラー）
+              primaryHover: '#164225',
+              accent: '#E86A33',      // 暖色オレンジ（アクセント）
+              accentLight: '#FFF2EC',
+              softGreen: '#EDF5F0',
+              border: '#E6E2DA',
+              text: '#262421',
+              muted: '#6E6A63'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* スムーススクロールと基本スタイル */
+    html {
+      scroll-behavior: smooth;
+    }
+    body {
+      background-color: #FAF8F5;
+      color: #262421;
+      -webkit-tap-highlight-color: transparent;
+    }
+    /* 横スクロールバーの非表示 */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    /* カスタムチェックボックスの選択アニメーション */
+    .ingredient-checkbox:checked + .ingredient-pill {
+      background-color: #1E5631;
+      color: #FFFFFF;
+      border-color: #1E5631;
+      box-shadow: 0 2px 6px rgba(30, 86, 49, 0.22);
+    }
+    .ingredient-checkbox:checked + .ingredient-pill .custom-box {
+      background-color: #FFFFFF;
+      border-color: #FFFFFF;
+    }
+    .ingredient-checkbox:checked + .ingredient-pill .custom-box svg {
+      opacity: 1;
+      transform: scale(1);
+    }
+    /* 食材名のレイアウト調整 */
+    .ing-name-base {
+      display: inline-block;
+      min-width: 3.5em;
+      white-space: nowrap;
+      line-height: 1.3;
+    }
+    /* モーダルアニメーション */
+    @keyframes modalFadeIn {
+      from { opacity: 0; transform: translateY(16px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .animate-modal {
+      animation: modalFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased selection:bg-kitchen-primary selection:text-white">
 
+  <!-- トップナビゲーションバー -->
+  <header class="sticky top-0 z-30 bg-kitchen-bg/95 backdrop-blur-md border-b border-kitchen-border">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-2.5">
+        <div class="w-10 h-10 rounded-xl bg-kitchen-primary text-white flex items-center justify-center shadow-sm">
+          <!-- 中華鍋アイコン SVG -->
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 13h14a3 3 0 01-3 3H6a3 3 0 01-3-3zm14 0l4-2m-11-5c0-1.5 1-2.5 1-4m4 4c0-1.5 1-2.5 1-4" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-lg sm:text-xl font-bold tracking-tight text-kitchen-text">今日なに作る？・食材マッチング</h1>
+          <p class="text-xs text-kitchen-muted hidden sm:block">冷蔵庫にある食材にチェックを入れるだけで、作れる家庭料理レシピと詳しい作り方を提案します</p>
+        </div>
+      </div>
+
+      <!-- クイック操作ボタン群 -->
+      <div class="flex flex-wrap items-center gap-2">
+        <button type="button" id="btnAddRecipeModal" class="px-3 py-2 text-xs sm:text-sm font-medium rounded-xl bg-kitchen-accent text-white hover:bg-[#d65b26] transition-colors cursor-pointer shadow-sm">
+          ➕ マイレシピ追加
+        </button>
+        <button type="button" id="btnPreset" class="px-3 py-2 text-xs sm:text-sm font-medium rounded-xl bg-kitchen-softGreen text-kitchen-primary hover:bg-kitchen-primary hover:text-white transition-colors cursor-pointer">
+          ✨ 定番ストック選択
+        </button>
+        <button type="button" id="btnSelectAll" class="px-3 py-2 text-xs sm:text-sm font-medium rounded-xl bg-white border border-kitchen-border text-kitchen-text hover:bg-gray-50 transition-colors cursor-pointer">
+          すべて選択
+        </button>
+        <button type="button" id="btnClearAll" class="px-3 py-2 text-xs sm:text-sm font-medium rounded-xl bg-white border border-kitchen-border text-kitchen-muted hover:text-red-600 hover:border-red-200 transition-colors cursor-pointer">
+          クリア
+        </button>
+      </div>
+    </div>
+
+    <!-- カテゴリ別クイックジャンプナビ -->
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 pb-2.5 overflow-x-auto no-scrollbar">
+      <div class="flex items-center gap-2 text-xs sm:text-sm whitespace-nowrap" id="categoryNav">
+        <!-- JSで動的にカテゴリタグを描画 -->
+      </div>
+    </div>
+  </header>
+
+  <!-- メインコンテンツエリア -->
+  <main class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 pt-5 pb-28 space-y-6">
+
+    <!-- トースト通知バナー -->
+    <div id="toastBanner" class="hidden rounded-2xl bg-kitchen-accentLight border border-orange-200 px-4 py-3 text-sm text-orange-900 flex items-center justify-between shadow-sm">
+      <div class="flex items-center gap-2">
+        <span class="text-base">💡</span>
+        <span id="toastMessage">お知らせ内容</span>
+      </div>
+      <button type="button" onclick="hideToast()" class="text-orange-700 hover:text-orange-950 font-medium px-2 py-1 rounded-lg cursor-pointer">閉じる</button>
+    </div>
+
+    <!-- 食材選択パネル -->
+    <section aria-label="食材選択パネル" class="space-y-4" id="ingredientGroupsContainer">
+      <!-- JSで動的にカテゴリ別の食材チェックボックスを描画 -->
+    </section>
+
+    <!-- レシピ検索結果エリア -->
+    <section id="resultSection" class="pt-4 scroll-mt-28">
+      <div class="bg-white rounded-3xl border border-kitchen-border p-5 sm:p-7 shadow-sm">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-kitchen-border">
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 class="text-xl sm:text-2xl font-bold text-kitchen-text">おすすめメニュー結果</h2>
+              <span id="resultSummaryBadge" class="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-kitchen-softGreen text-kitchen-primary">
+                全 0 品の厳選レシピ
+              </span>
+            </div>
+            <p id="resultSubTitle" class="text-sm text-kitchen-muted mt-1">
+              上の食材を選択して【メニューを作成】を押すか、料理カードをクリックすると詳しい作り方が見られます
+            </p>
+          </div>
+
+          <!-- 結果フィルタータブ -->
+          <div class="flex p-1 bg-kitchen-bg rounded-xl border border-kitchen-border self-start sm:self-auto" id="resultTabs">
+            <button type="button" data-tab="all" class="tab-btn px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-lg bg-white text-kitchen-primary shadow-sm transition-all cursor-pointer">
+              すべて (<span id="countAll">0</span>)
+            </button>
+            <button type="button" data-tab="exact" class="tab-btn px-3.5 py-1.5 text-xs sm:text-sm font-medium rounded-lg text-kitchen-muted hover:text-kitchen-text transition-all cursor-pointer">
+              ✅ 食材が揃っている (<span id="countExact">0</span>)
+            </button>
+            <button type="button" data-tab="partial" class="tab-btn px-3.5 py-1.5 text-xs sm:text-sm font-medium rounded-lg text-kitchen-muted hover:text-kitchen-text transition-all cursor-pointer">
+              🔸 あと少しで作れる (<span id="countPartial">0</span>)
+            </button>
+          </div>
+        </div>
+
+        <!-- レシピカードグリッド -->
+        <div id="recipeGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-6">
+          <!-- JSで動的にレシピカードを描画 -->
+        </div>
+
+        <!-- 検索結果ゼロ時の表示 -->
+        <div id="emptyResultState" class="hidden py-12 text-center">
+          <div class="w-16 h-16 mx-auto mb-3 rounded-2xl bg-kitchen-bg flex items-center justify-center text-3xl">🥗</div>
+          <h3 class="text-base font-semibold text-kitchen-text">条件に一致するレシピが見つかりませんでした</h3>
+          <p class="text-sm text-kitchen-muted mt-1 max-w-md mx-auto">ピーマン・じゃがいも・卵などの基本食材を追加で選択するか、「すべて」タブに切り替えてあと1〜2品で作れるレシピを探してみてください。</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 画面下部固定バー：選択数カウンター + 【メニューを作成】メインボタン -->
+  <div class="fixed bottom-0 inset-x-0 z-30 bg-white/95 backdrop-blur-md border-t border-kitchen-border shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2">
+          <span class="text-xs sm:text-sm font-semibold text-kitchen-text whitespace-nowrap">
+            選択中の食材：<span id="selectedCount" class="text-kitchen-accent font-bold text-base">0</span> 品
+          </span>
+        </div>
+        <!-- 選択中食材の横スクロールタグ一覧 -->
+        <div id="selectedTagsPreview" class="flex items-center gap-1.5 overflow-x-auto no-scrollbar mt-1 text-xs text-kitchen-muted">
+          <span>食材が未選択です。上のリストから選んでください...</span>
+        </div>
+      </div>
+
+      <button type="button" id="btnGenerateMenu" class="shrink-0 px-6 sm:px-8 py-3 sm:py-3.5 rounded-2xl bg-kitchen-accent hover:bg-[#d65b26] active:scale-[0.98] text-white font-bold text-sm sm:text-base shadow-lg shadow-orange-500/25 flex items-center gap-2 transition-all cursor-pointer">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+        </svg>
+        <span>メニューを作成</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- レシピ詳細＆作り方モーダル -->
+  <div id="recipeModal" onclick="closeRecipeModal()" class="fixed inset-0 z-50 hidden items-center justify-center p-3 sm:p-6 bg-black/50 backdrop-blur-xs" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="bg-white w-full max-w-2xl max-h-[90vh] rounded-3xl shadow-2xl border border-kitchen-border flex flex-col overflow-hidden animate-modal" onclick="event.stopPropagation()">
+      <!-- モーダルヘッダー -->
+      <div class="px-6 py-4 sm:py-5 bg-kitchen-softGreen/70 border-b border-kitchen-border flex items-start justify-between gap-4">
+        <div>
+          <div class="flex flex-wrap items-center gap-2 mb-1">
+            <span id="modalCategoryBadge" class="px-2.5 py-0.5 text-xs font-semibold rounded-lg bg-kitchen-primary text-white">豚肉料理</span>
+            <span id="modalTimeBadge" class="text-xs text-kitchen-muted font-medium">⏱️ 約 15分</span>
+          </div>
+          <h3 id="modalTitle" class="text-xl sm:text-2xl font-bold text-kitchen-text">料理名</h3>
+        </div>
+        <button type="button" onclick="closeRecipeModal()" class="p-2 rounded-xl bg-white/80 hover:bg-white text-kitchen-muted hover:text-kitchen-text border border-kitchen-border transition-colors cursor-pointer" aria-label="閉じる">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- モーダルスクロールコンテンツ -->
+      <div class="p-6 overflow-y-auto space-y-6">
+        <!-- 必須メイン食材 -->
+        <div>
+          <h4 class="text-sm font-bold text-kitchen-text tracking-wider flex items-center gap-1.5 mb-2.5">
+            <span class="w-2 h-2 rounded-full bg-kitchen-primary"></span>
+            必須メイン食材（緑色は選択済み）
+          </h4>
+          <div id="modalRequiredIngredients" class="flex flex-wrap gap-2"></div>
+        </div>
+
+        <!-- 代用食材・おすすめアレンジ -->
+        <div class="p-4 rounded-2xl bg-kitchen-bg border border-kitchen-border">
+          <h4 class="text-sm font-bold text-kitchen-text flex items-center gap-1.5 mb-1.5">
+            <span>🔄</span> 代用できる食材・おすすめアレンジ
+          </h4>
+          <p id="modalSubstitutes" class="text-sm text-kitchen-muted leading-relaxed"></p>
+        </div>
+
+        <!-- 下ごしらえ・下味のポイント -->
+        <div class="p-4 rounded-2xl bg-kitchen-accentLight/70 border border-orange-200/80">
+          <h4 class="text-sm font-bold text-orange-950 flex items-center gap-1.5 mb-1.5">
+            <span>🔪</span> 下ごしらえ・下味のポイント
+          </h4>
+          <p id="modalPrepTips" class="text-sm text-orange-900/90 leading-relaxed"></p>
+        </div>
+
+        <!-- 詳しい作り方・手順 -->
+        <div>
+          <h4 class="text-sm font-bold text-kitchen-text tracking-wider flex items-center gap-1.5 mb-3">
+            <span class="w-2 h-2 rounded-full bg-kitchen-accent"></span>
+            詳しい作り方・調理手順
+          </h4>
+          <ol id="modalSteps" class="space-y-3">
+            <!-- JSで手順を動的に生成 -->
+          </ol>
+        </div>
+      </div>
+
+      <!-- モーダルフッター -->
+      <div class="px-6 py-3.5 bg-kitchen-bg border-t border-kitchen-border flex items-center justify-between gap-2">
+        <span class="text-xs text-kitchen-muted">※にんにく・しょうが・醤油・酒・片栗粉などの基本調味料は常備前提としています</span>
+        <button type="button" onclick="closeRecipeModal()" class="shrink-0 px-5 py-2 rounded-xl bg-kitchen-primary hover:bg-kitchen-primaryHover text-white text-sm font-semibold transition-colors cursor-pointer">
+          閉じる
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- マイレシピ手動追加モーダル -->
+  <div id="addRecipeModal" onclick="closeAddModal()" class="fixed inset-0 z-50 hidden items-center justify-center p-3 sm:p-6 bg-black/50 backdrop-blur-xs" role="dialog" aria-modal="true">
+    <div class="bg-white w-full max-w-lg max-h-[95vh] rounded-3xl shadow-2xl border border-kitchen-border flex flex-col overflow-hidden animate-modal" onclick="event.stopPropagation()">
+      <div class="px-6 py-4 bg-kitchen-softGreen/70 border-b border-kitchen-border flex items-center justify-between">
+        <h3 class="text-lg font-bold text-kitchen-text">➕ マイレシピを手動で追加</h3>
+        <button type="button" onclick="closeAddModal()" class="p-1.5 rounded-xl bg-white text-kitchen-muted border border-kitchen-border cursor-pointer hover:text-kitchen-text">✕</button>
+      </div>
+      <form id="addRecipeForm" onsubmit="handleCustomRecipeSubmit(event)" class="p-6 overflow-y-auto space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-kitchen-text mb-1">料理名 *</label>
+          <input type="text" id="customName" required placeholder="例：トマトと卵の中華炒め" class="w-full px-3 py-2 rounded-xl border border-kitchen-border text-sm focus:outline-none focus:border-kitchen-primary" />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-kitchen-text mb-1">カテゴリー *</label>
+            <select id="customCategory" class="w-full px-3 py-2 rounded-xl border border-kitchen-border text-sm bg-white focus:outline-none focus:border-kitchen-primary">
+              <option value="豚肉料理">豚肉料理</option>
+              <option value="鶏肉・魚介料理">鶏肉・魚介料理</option>
+              <option value="牛肉・羊肉料理">牛肉・羊肉料理</option>
+              <option value="野菜メイン">野菜メイン</option>
+              <option value="卵・豆腐・きのこ">卵・豆腐・きのこ</option>
+              <option value="ご飯・麺類">ご飯・麺類</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-kitchen-text mb-1">調理時間 *</label>
+            <input type="text" id="customTime" required placeholder="例：10分" class="w-full px-3 py-2 rounded-xl border border-kitchen-border text-sm focus:outline-none focus:border-kitchen-primary" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-kitchen-text mb-1">必須食材（カンマまたは読点で区切る） *</label>
+          <input type="text" id="customIngredients" required placeholder="例：トマト, 卵" class="w-full px-3 py-2 rounded-xl border border-kitchen-border text-sm focus:outline-none focus:border-kitchen-primary" />
+          <p class="text-[11px] text-kitchen-muted mt-1">リストにある食材名と一致させると、チェック時に自動でマッチングされます。</p>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-kitchen-text mb-1">代用・アレンジのヒント</label>
+          <input type="text" id="customSubstitutes" placeholder="例：砂糖を少し加えるとトマトの酸味がまろやかになります" class="w-full px-3 py-2 rounded-xl border border-kitchen-border text-sm focus:outline-none focus:border-kitchen-primary" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-kitchen-text mb-1">下ごしらえのポイント</label>
+          <input type="text" id="customPrepTips" placeholder="例：卵を溶くときに水を少し加えるとふんわり仕上がります" class="w-full px-3 py-2 rounded-xl border border-kitchen-border text-sm focus:outline-none focus:border-kitchen-primary" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-kitchen-text mb-1">調理手順（1行につき1ステップ） *</label>
+          <textarea id="customSteps" rows="3" required placeholder="1. 卵をふんわり炒めて一度取り出す&#10;2. トマトを炒めて果汁を出す&#10;3. 卵を戻し入れてサッと炒め合わせる" class="w-full px-3 py-2 rounded-xl border border-kitchen-border text-sm focus:outline-none focus:border-kitchen-primary"></textarea>
+        </div>
+        <div class="pt-2 flex justify-end gap-2">
+          <button type="button" onclick="closeAddModal()" class="px-4 py-2 rounded-xl border border-kitchen-border text-sm font-medium text-kitchen-muted cursor-pointer hover:bg-gray-50">キャンセル</button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-kitchen-primary text-white text-sm font-semibold hover:bg-kitchen-primaryHover cursor-pointer">保存してメニューに追加</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    /**
+     * 1. 日常食材データベース
+     */
+    const INGREDIENT_GROUPS = [
+      {
+        id: 'veg',
+        name: '野菜・果物',
+        icon: '🥬',
+        desc: '根菜・葉物・実野菜から料理に使える果物まで幅広く網羅',
+        items: [
+          'じゃがいも', 'にんじん', '大根', '玉ねぎ', '長ねぎ',
+          'キャベツ', '白菜', 'ミニ白菜', 'ほうれん草', '小松菜・青梗菜',
+          'レタス', '油麦菜（ロメインレタス）', '空芯菜', '水菜', '春菊',
+          'ひゆ菜', 'しろ菜', 'ニラ', 'セロリ', 'トマト',
+          'きゅうり', 'なす', 'ピーマン・ししとう', 'パプリカ', 'いんげん',
+          '干しインゲン', 'さやえんどう', 'にんにくの芽', '山芋・長芋', 'れんこん',
+          'たけのこ', '冬瓜', 'へちま', 'ゴーヤ', 'かぼちゃ',
+          'さつまいも', 'ズッキーニ', 'ブロッコリー', 'カリフラワー', 'もやし',
+          '里芋', 'マコモダケ', 'アスパラガス', 'オクラ', '高菜・酸菜（発酵白菜）',
+          '葉にんにく', 'パイナップル'
+        ]
+      },
+      {
+        id: 'pork',
+        name: '豚肉',
+        icon: '🥩',
+        desc: '細切り・薄切り・ブロック・スペアリブ・ひき肉など部位・形状別',
+        items: [
+          '豚ロース細切り', '豚ロース薄切り', '豚バラ薄切り', '豚肩ロース薄切り',
+          '豚こま・切り落とし', '豚バラブロック', '豚スペアリブ', '豚ひき肉', '豚レバー薄切り'
+        ]
+      },
+      {
+        id: 'beef_lamb',
+        name: '牛肉・羊肉',
+        icon: '🐂',
+        desc: '炒め物用薄切り・角切り・煮込み用すね肉・しゃぶしゃぶ用スライス',
+        items: [
+          '牛ロース薄切り', '牛角切り・サイコロ', '牛肉細切り', '牛バラ薄切り',
+          '牛すね・カレー用角切り', '骨付きカルビ', 'ラム薄切り肉'
+        ]
+      },
+      {
+        id: 'poultry_seafood',
+        name: '鶏肉・鴨肉・魚介',
+        icon: '🍗',
+        desc: '鶏むね・もも・手羽・砂肝・鴨肉・むきえび・切り身魚など',
+        items: [
+          '鶏むね角切り', '鶏むね薄切り', '鶏むね細切り', '鶏もも肉', '骨付き鶏ももぶつ切り', '手羽中',
+          '砂肝', '鴨ももぶつ切り', '鴨ロース薄切り', '鴨血（ヤーシュエ）',
+          'むきえび', '太刀魚', '鯉・川魚'
+        ]
+      },
+      {
+        id: 'soy_mushroom_egg',
+        name: '卵・大豆製品・きのこ',
+        icon: '🍄',
+        desc: '木綿・絹ごし豆腐、湯葉・厚揚げ、各種きのこ、卵・ナッツ類',
+        items: [
+          '卵', '木綿豆腐', '絹ごし豆腐', '厚揚げ・油揚げ', '高野豆腐・凍り豆腐',
+          '干し豆腐（シート）', '干し豆腐（細切り）', '押し豆腐・厚切り干豆腐', '湯葉（腐竹）', 'きくらげ',
+          '白きくらげ', 'しいたけ', 'えのきだけ', 'エリンギ',
+          'ひらたけ・マッシュルーム', 'ピーナッツ'
+        ]
+      },
+      {
+        id: 'staple_noodle',
+        name: 'ご飯・麺・春雨',
+        icon: '🍜',
+        desc: 'チャーハンや焼きそば、春雨炒めなどの主食メニュー用',
+        items: [
+          'ご飯', '板春雨（幅広春雨）', '春雨', 'インスタント麺', 'パスタ', '乾麺・中華麺'
+        ]
+      },
+      {
+        id: 'seasonings',
+        name: '常備調味料・香味野菜',
+        icon: '🔥',
+        desc: '基本の油・塩・醤油・酢から中華スパイス、香り付けの香味野菜まで',
+        items: [
+          'サラダ油', 'ラード', 'ピーナッツ油', '塩', '砂糖', '片栗粉', 'コーンスターチ', 'じゃがいも片栗粉',
+          '氷砂糖', '鶏がらスープの素', 'うま味調味料', '昆布だし', '白こしょう', '黒こしょう', '十三香', '五香粉',
+          'クミンパウダー', '花椒パウダー', '醤油（薄口・濃口）', 'たまり醤油（老抽）', 'オイスターソース', '豆板醤', '甜麺醤',
+          '黄豆醤（中華みそ）', '料理酒・紹興酒', '香醋（黒酢）', '鎮江香醋', '米酢',
+          '穀物酢', 'ごま油', '唐辛子（鷹の爪）', '花椒（ホアジャオ）',
+          '八角', 'シナモン（桂皮）', 'ローリエ', '長ねぎ（薬味）', 'しょうが',
+          'にんにく', '赤唐辛子（生）'
+        ]
+      }
+    ];
+
+    /**
+     * 2. 定番家庭料理レシピデータベース
+     */
+    const RECIPES = [
+      // ================= 揚げ物・甘酢系 =================
+      {
+        id: 'ganzha_liji',
+        name: '豚ヒレのサクサク唐揚げ（干炸里脊）',
+        category: '豚肉料理',
+        time: '15分',
+        requiredGroups: [
+          { label: '豚ロース薄切り', options: ['豚ロース薄切り', '豚ロース細切り', '豚こま・切り落とし'] },
+          { label: '片栗粉', options: ['片栗粉', 'コーンスターチ', 'じゃがいも片栗粉'] }
+        ],
+        substitutes: 'つけダレは花椒塩、クミン塩、またはケチャップがおすすめ。二度揚げがカリッと仕上げるコツです。',
+        prepTips: '豚肉をスティック状に切り、酒・醤油・しょうが汁・塩少々を揉み込んで10分置き、片栗粉（または溶き卵＋片栗粉）をまぶします。',
+        steps: [
+          '鍋に多めの油を170℃（中温）に熱し、衣をつけた豚肉を1本ずつ入れて中火で表面が固まるまで揚げます。',
+          '一度取り出して油を切ります。油の温度を190℃（高温）に上げ、豚肉をすべて戻し入れて15秒ほど二度揚げし、きつね色になったら完成です。'
+        ]
+      },
+      {
+        id: 'zha_xiaqiu',
+        name: 'プリプリえび団子の唐揚げ（炸蝦球）',
+        category: '鶏肉・魚介料理',
+        time: '12分',
+        requiredGroups: [
+          { label: 'むきえび', options: ['むきえび'] },
+          { label: '片栗粉', options: ['片栗粉', 'コーンスターチ'] },
+          { label: '卵', options: ['卵'] }
+        ],
+        substitutes: '仕上げにパン粉をつけるとさらにサクサクになります。スイートチリソースやオーロラソースとも相性抜群です。',
+        prepTips: 'むきえびの水気をキッチンペーパーでよく拭き取り、塩少々・白こしょう・酒を揉み込み、溶き卵と片栗粉を絡めます。',
+        steps: [
+          '160〜170℃の油にえびを入れ、表面が固まってきつね色に浮き上がるまで揚げます。',
+          '網じゃくしですくって油をよく切り、熱々のうちにお好みのタレを添えてお召し上がりください。'
+        ]
+      },
+      {
+        id: 'tangcu_liji',
+        name: '豚ロースの甘酢あんかけ（糖醋里脊）',
+        category: '豚肉料理',
+        time: '20分',
+        requiredGroups: [
+          { label: '豚ロース薄切り', options: ['豚ロース薄切り', '豚ロース細切り', '豚こま・切り落とし'] },
+          { label: '片栗粉', options: ['片栗粉', 'コーンスターチ'] },
+          { label: '砂糖', options: ['砂糖'] },
+          { label: '酢', options: ['香醋（黒酢）', '鎮江香醋', '米酢', '穀物酢'] }
+        ],
+        substitutes: '彩りにパプリカやパイナップルを加えても美味しく仕上がります。',
+        prepTips: '豚肉は衣をつけてカリッと揚げておきます。甘酢ダレ（酢2：砂糖2：醤油1：水3）を事前に混ぜておきます。',
+        steps: [
+          'スティック状に切った豚肉に片栗粉の衣をつけて揚げ、油を切っておきます。',
+          'フライパンに少量の油を残して甘酢ダレを流し入れ、煮立ったら水溶き片栗粉でとろみをつけます。',
+          '揚げた豚肉を戻し入れ、強火で手早くタレを全体に絡めたら完成です。'
+        ]
+      },
+      {
+        id: 'tangcu_xiaren',
+        name: 'むきえびの甘酢炒め（糖醋蝦仁）',
+        category: '鶏肉・魚介料理',
+        time: '15分',
+        requiredGroups: [
+          { label: 'むきえび', options: ['むきえび'] },
+          { label: '砂糖', options: ['砂糖'] },
+          { label: '酢', options: ['香醋（黒酢）', '鎮江香醋', '米酢', '穀物酢'] }
+        ],
+        substitutes: 'えびはサッと油通しするか、片栗粉をまぶして焼き付けるとタレがよく絡みます。',
+        prepTips: 'むきえびは背開きにして背ワタを取り、酒と塩少々で下味をつけます。',
+        steps: [
+          'フライパンに油を熱し、えびの色が変わるまで炒めて一度取り出します。',
+          '同じフライパンに甘酢ダレを入れて煮立たせ、えびを戻し入れて煮詰めるように炒め合わせます。',
+          'とろっとした甘酢ダレがえびにしっかり絡んだら器に盛ります。'
+        ]
+      },
+
+      // ================= 豚肉料理 =================
+      {
+        id: 'qingjiao_rousi',
+        name: 'チンジャオロース（青椒肉絲）',
+        category: '豚肉料理',
+        time: '12分',
+        requiredGroups: [
+          { label: '豚ロース細切り', options: ['豚ロース細切り', '豚こま・切り落とし'] },
+          { label: 'ピーマン・ししとう', options: ['ピーマン・ししとう'] }
+        ],
+        substitutes: '豚こま肉の細切りでも代用可。パプリカ、たけのこ水煮、マコモダケ、玉ねぎの細切りを加えると本格的になります。',
+        prepTips: '豚肉に醤油・酒・片栗粉を揉み込んで10分ほど置き、下味をつけます。',
+        steps: [
+          'フライパンに油を熱し、下味をつけた豚肉をほぐしながら色が変わるまで炒め、一度取り出します。',
+          '同じフライパンににんにくの薄切りを入れて香りを出し、細切りにしたピーマンをサッと炒めます。',
+          '豚肉を戻し入れ、醤油・オイスターソース・塩少々を加え、強火で15秒ほど一気に炒め合わせて完成です。'
+        ]
+      },
+      {
+        id: 'yuxiang_rousi',
+        name: '豚肉の魚香炒め（魚香肉絲）',
+        category: '豚肉料理',
+        time: '15分',
+        requiredGroups: [
+          { label: '豚ロース細切り', options: ['豚ロース細切り', '豚こま・切り落とし'] },
+          { label: 'きくらげ', options: ['きくらげ'] },
+          { label: 'にんじん', options: ['にんじん'] }
+        ],
+        substitutes: 'ピーマンやたけのこの細切りを加えても美味。合わせ調味料（醤油・酢・砂糖・片栗粉・水）が味の決め手です。',
+        prepTips: 'きくらげは水で戻して細切りに、にんじんも細切りにします。魚香ソース（醤油・酢・砂糖・片栗粉・水）を事前に混ぜておきます。',
+        steps: [
+          '下味をつけた豚肉を炒めて色が変わったら一度取り出します。',
+          'しょうが・にんにくのみじん切りと豆板醤を炒めて香りを出し、にんじんときくらげを加えてしんなりするまで炒めます。',
+          '豚肉を戻し入れ、魚香ソースを回し入れて強火でとろみがつくまで炒め合わせます。'
+        ]
+      },
+      {
+        id: 'huiguorou',
+        name: '本格回鍋肉（ホイコーロー）',
+        category: '豚肉料理',
+        time: '25分',
+        requiredGroups: [
+          { label: '豚バラ薄切り', options: ['豚バラ薄切り', '豚肩ロース薄切り'] },
+          { label: '葉にんにく・キャベツ・玉ねぎ', options: ['葉にんにく', '玉ねぎ', 'キャベツ'] }
+        ],
+        substitutes: '葉にんにくが手に入らない場合は、キャベツ・玉ねぎ・ピーマン・厚揚げなどで代用してもご飯が進む味わいになります。',
+        prepTips: 'ブロック肉を使う場合はしょうが・ねぎ・酒を入れた水から20分ほど茹でて冷まし、2〜3mmの薄切りにします。キャベツは一口大にざく切りにします。',
+        steps: [
+          'フライパンに少量の油を熱し、豚バラ肉を中弱火でじっくり炒めて余分な脂を出し、肉が反り返るくらいまで焼きます。',
+          '肉を端に寄せ、豆板醤・甜麺醤・にんにく・しょうがを加えて赤い油が出るまで炒め、肉と絡めます。',
+          'キャベツ（または葉にんにくの白い部分）を加えて強火で30秒ほど炒めます。',
+          '醤油・砂糖少々を回し入れ、葉の部分を加えて強火で10秒サッと炒め合わせたら完成です。'
+        ]
+      },
+      {
+        id: 'nongjia_xiaochao',
+        name: '農家風ピリ辛豚炒め（農家小炒肉）',
+        category: '豚肉料理',
+        time: '15分',
+        requiredGroups: [
+          { label: '豚バラ・豚こま薄切り', options: ['豚バラ薄切り', '豚こま・切り落とし', '豚肩ロース薄切り'] },
+          { label: 'ピーマン・ししとう', options: ['ピーマン・ししとう'] }
+        ],
+        substitutes: 'ししとうや青唐辛子を使うとより本格的。セロリや葉にんにく、赤唐辛子を加えても風味が増します。',
+        prepTips: '脂身と赤身を分けて切り、赤身には醤油・たまり醤油少々を揉み込んで5分置きます。ピーマンは乱切り、にんにくは潰しておきます。',
+        steps: [
+          '油をひかない（または薄く塗った）フライパンにピーマンと塩少々を入れ、中火で表面に焼き目がつくまで空炒りして取り出します。',
+          'フライパンに脂身を入れて弱火で脂を引き出し、潰したにんにくと唐辛子を入れて香りを立てます。',
+          '赤身肉を加えて強火で一気に色が変わるまで炒め、酒を回し入れます。',
+          '焼いたピーマンを戻し入れ、醤油・オイスターソース・鶏がらスープの素少々を加え、強火で15秒炒め合わせます。'
+        ]
+      },
+      {
+        id: 'muxurou',
+        name: '豚肉ときくらげの卵炒め（木須肉）',
+        category: '豚肉料理',
+        time: '15分',
+        requiredGroups: [
+          { label: '豚ロース薄切り', options: ['豚ロース薄切り', '豚こま・切り落とし', '豚肩ロース薄切り'] },
+          { label: '卵', options: ['卵'] },
+          { label: 'きくらげ', options: ['きくらげ'] }
+        ],
+        substitutes: '定番のきゅうりの薄切りやにんじんの薄切りを加えると、彩りも食感もさらに良くなります。',
+        prepTips: '豚肉は酒・醤油・片栗粉で下味をつけます。卵は酒少々を加えて溶きほぐし、きくらげは水で戻して一口大にちぎります。',
+        steps: [
+          '多めの油を熱したフライパンに溶き卵を流し入れ、ふんわり大きく炒めて一度取り出します。',
+          '少量の油を足し、豚肉の色が変わるまで炒めて取り出します。',
+          '長ねぎ・しょうがのみじん切りを炒め、きくらげ（あればにんじん）を加えて中火で1分炒めます（油はねに注意）。',
+          '卵・豚肉・きゅうりを戻し入れ、醤油・オイスターソース・塩・砂糖少々で味を調え、強火で20秒炒め合わせます。'
+        ]
+      },
+      {
+        id: 'roumo_qiezi',
+        name: '麻婆風・豚ひき肉となすの味噌炒め',
+        category: '豚肉料理',
+        time: '20分',
+        requiredGroups: [
+          { label: '豚ひき肉', options: ['豚ひき肉'] },
+          { label: 'なす', options: ['なす'] }
+        ],
+        substitutes: '牛ひき肉や鶏ひき肉でも代用可。パプリカやいんげんを加えても美味しく仕上がります。',
+        prepTips: 'なすは乱切りにして塩小さじ1を振って10分置き、水気を絞って片栗粉を薄くまぶすと、少ない油で変色せずトロッと仕上がります。',
+        steps: [
+          'フライパンに油を熱し、なすを中火で3〜4分こんがり柔らかくなるまで炒めて一度取り出します。',
+          '同じフライパンで豚ひき肉をパラパラになるまで炒め、にんにく・しょうがのみじん切りと豆板醤を加えて香りを出します。',
+          '醤油・たまり醤油・オイスターソース・砂糖・水（100ml）を加えて煮立たせます。',
+          'なすを戻し入れて2分ほど煮含め、水溶き片栗粉でとろみをつけて刻みねぎを散らします。'
+        ]
+      },
+      {
+        id: 'mayi_shangshu',
+        name: '豚ひき肉と春雨のピリ辛炒め（螞蟻上樹）',
+        category: '豚肉料理',
+        time: '15分',
+        requiredGroups: [
+          { label: '豚ひき肉', options: ['豚ひき肉'] },
+          { label: '春雨・板春雨', options: ['春雨', '板春雨（幅広春雨）'] }
+        ],
+        substitutes: '牛ひき肉でも代用可能。幅広の板春雨を使うとモチモチした食感になります。ピーマンやにんじんのみじん切りを加えても◎。',
+        prepTips: '春雨はぬるま湯で戻して食べやすい長さに切っておきます（熱湯で茹ですぎないのがポイント）。',
+        steps: [
+          'フライパンに油を熱し、豚ひき肉を中弱火でカリッとするまで炒めます。',
+          'にんにく・しょうがのみじん切りと豆板醤を加えて香りを出し、酒を回し入れます。',
+          '水（200ml）・醤油・たまり醤油・砂糖少々を加えて煮立たせます。',
+          '水気を切った春雨を入れ、中火で汁気を吸わせながら2〜3分炒め煮にし、仕上げにねぎを散らします。'
+        ]
+      },
+      {
+        id: 'hongshao_paigu',
+        name: '豚スペアリブの甘辛煮（紅焼排骨）',
+        category: '豚肉料理',
+        time: '40分',
+        requiredGroups: [
+          { label: '豚スペアリブ', options: ['豚スペアリブ'] }
+        ],
+        substitutes: '煮込む際にじゃがいも・にんじん・うずらの卵などを加えるとボリューム満点のおかずになります。',
+        prepTips: 'スペアリブは水から茹でて沸騰したらアクを取り、ぬるま湯で洗って水気を拭きます。',
+        steps: [
+          '鍋に少量の油と氷砂糖（または砂糖）を入れて弱火で溶かし、茶色く泡立ったらスペアリブを入れて全体に焼き色をつけます。',
+          'しょうが・長ねぎ・八角・ローリエを加え、酒・醤油・たまり醤油を回し入れて香りを立てます。',
+          'かぶるくらいの熱湯を注ぎ、フタをして弱火で30分煮込みます（野菜を入れる場合は残り15分で投入）。',
+          '塩で味を調え（甘酢風にする場合は酢大さじ2と砂糖大さじ1を追加）、強火で煮汁に照りが出るまで煮詰めます。'
+        ]
+      },
+      {
+        id: 'suantai_rousi',
+        name: 'にんにくの芽と豚肉のスタミナ炒め',
+        category: '豚肉料理',
+        time: '15分',
+        requiredGroups: [
+          { label: '豚ロース細切り', options: ['豚ロース細切り', '豚こま・切り落とし'] },
+          { label: 'にんにくの芽', options: ['にんにくの芽'] }
+        ],
+        substitutes: 'セロリやいんげん、ニラでも代用可能。赤唐辛子を加えると彩りと辛味が引き立ちます。',
+        prepTips: 'にんにくの芽は4cm長さに切り、塩と油少々を入れた熱湯で30秒下茹ですると色鮮やかに仕上がります。豚肉は醤油と片栗粉で下味をつけます。',
+        steps: [
+          'フライパンに油を熱し、下味をつけた豚肉を強火でサッと炒めて取り出します。',
+          '同じフライパンでにんにくと唐辛子を炒め、にんにくの芽を加えて強火で1分炒めます。',
+          '豚肉を戻し入れ、醤油・オイスターソース・塩・砂糖少々を加えます。',
+          '強火で20秒ほど手早く炒め合わせたら完成です。'
+        ]
+      },
+      {
+        id: 'baochao_zhugan',
+        name: '豚レバーとピーマンの強火炒め（溜肝尖）',
+        category: '豚肉料理',
+        time: '15分',
+        requiredGroups: [
+          { label: '豚レバー薄切り', options: ['豚レバー薄切り'] },
+          { label: 'ピーマン・玉ねぎ・にんじん', options: ['ピーマン・ししとう', '玉ねぎ', 'にんじん'] }
+        ],
+        substitutes: 'ピーマン、玉ねぎ、にんじん、きくらげなどを自由に組み合わせて作れます。',
+        prepTips: '薄切りレバーは水洗いして15分水にさらして血抜きし、水気を絞って酒・醤油・白こしょう・片栗粉を揉み込みます。合わせ調味料（醤油・オイスターソース・酢・片栗粉・水）を用意しておきます。',
+        steps: [
+          '多めの油を170℃に熱し、レバーを入れて強火で20秒ほどサッと火を通し、色が変わったらすぐに取り出します（炒めすぎ注意）。',
+          '油を少し残したフライパンでにんにく・しょうがを炒め、ピーマンやにんじんを加えて30秒炒めます。',
+          'レバーを戻し入れ、合わせ調味料を回し入れます。',
+          '強火で10秒ほど一気に絡め、とろみがついたらすぐにお皿に盛ります。'
+        ]
+      },
+      {
+        id: 'hongshaorou_tudou',
+        name: '豚バラブロックとじゃがいもの角煮風',
+        category: '豚肉料理',
+        time: '45分',
+        requiredGroups: [
+          { label: '豚バラブロック', options: ['豚バラブロック'] },
+          { label: 'じゃがいも・大根・たけのこ', options: ['じゃがいも', '干しインゲン', '大根', 'たけのこ'] }
+        ],
+        substitutes: '豚バラの旨味を吸ったじゃがいも、大根、たけのこ、干しインゲンは絶品です。',
+        prepTips: '豚バラは2.5cm角に切って下茹でします。じゃがいもは大きめの乱切りにします。',
+        steps: [
+          'フライパンに豚バラを入れ、弱火で表面に焼き色がつくまで炒めて余分な脂を拭き取ります。',
+          'しょうが・長ねぎ・八角・シナモンと醤油・たまり醤油・酒・砂糖を加えて炒め合わせます。',
+          'かぶるくらいの熱湯を注ぎ、フタをして弱火で30分煮込みます。',
+          'じゃがいもと塩少々を加え、さらに15分ほど柔らかくなるまで煮て、最後に強火で煮汁を煮詰めます。'
+        ]
+      },
+      {
+        id: 'suancai_fensi_wurou',
+        name: '発酵白菜（酸菜）と豚バラ・春雨の炒め煮',
+        category: '豚肉料理',
+        time: '20分',
+        requiredGroups: [
+          { label: '高菜・酸菜（発酵白菜）', options: ['高菜・酸菜（発酵白菜）'] },
+          { label: '豚バラ・ひき肉・春雨', options: ['豚バラ薄切り', '豚こま・切り落とし', '豚ひき肉', '板春雨（幅広春雨）', '春雨'] }
+        ],
+        substitutes: '酸味と旨味がクセになる東北家庭料理。春雨や幅広春雨を入れると汁気を吸って美味しくなります。',
+        prepTips: '酸菜（または高菜漬け）は千切りにして水で軽く洗い、水気をしっかり絞ります。春雨はぬるま湯で戻しておきます。',
+        steps: [
+          'フライパンで豚バラ肉（またはひき肉）を炒めて脂を出し、ねぎ・しょうが・にんにく・唐辛子を加えて香りを出します。',
+          '水気を絞った酸菜を加え、中強火で2〜3分しっかり炒めて水分を飛ばします。',
+          '醤油・たまり醤油・砂糖少々・水（100ml）と戻した春雨を加えます。',
+          'フタをして3分ほど蒸し煮にし、春雨が汁気を吸ったらねぎを散らして完成です。'
+        ]
+      },
+      {
+        id: 'zhusun_chaorou',
+        name: 'たけのこと豚肉のオイスター炒め',
+        category: '豚肉料理',
+        time: '15分',
+        requiredGroups: [
+          { label: 'たけのこ', options: ['たけのこ'] },
+          { label: '豚バラ・豚ロース薄切り', options: ['豚バラ薄切り', '豚ロース薄切り', '豚肩ロース薄切り'] }
+        ],
+        substitutes: '葉にんにくやピーマン、きくらげを加えると食感のコントラストが楽しめます。',
+        prepTips: '生のたけのこを使う場合は下茹でしてアク抜きをし、薄切りにします（水煮の場合はサッと湯通しします）。',
+        steps: [
+          'フライパンに油を熱し、豚肉を炒めます（ロース肉の場合は酒・醤油・片栗粉で下味をつけておきます）。',
+          'にんにく・しょうが・唐辛子を加えて香りを出し、たけのこを入れて強火で1分半炒めます。',
+          '醤油・オイスターソース・砂糖・塩少々で調味し、仕上げにピーマンやねぎを加えて20秒炒め合わせます。'
+        ]
+      },
+
+      // ================= 牛肉・羊肉料理 =================
+      {
+        id: 'xiaochao_huangniurou',
+        name: '牛肉とピーマンのピリ辛強火炒め',
+        category: '牛肉・羊肉料理',
+        time: '12分',
+        requiredGroups: [
+          { label: '牛ロース薄切り', options: ['牛ロース薄切り'] },
+          { label: 'ピーマン・ししとう', options: ['ピーマン・ししとう'] }
+        ],
+        substitutes: 'パクチーの茎、セロリ、赤唐辛子を加えるとお店のような本格的な味わいになります。',
+        prepTips: '牛肉は繊維を断ち切るように薄切りにし、醤油・オイスターソース・白こしょう・片栗粉を揉み込み、最後にサラダ油を絡めて15分置きます。',
+        steps: [
+          'にんにく・しょうが・赤唐辛子の小口切り、乱切りにしたピーマンを用意します。',
+          '熱したフライパンに油をひき、牛肉を強火でサッとほぐしながら8割ほど火が通ったらすぐに取り出します。',
+          '残った油でにんにく・しょうが・唐辛子を炒め、ピーマンを加えて強火で香ばしく炒めます。',
+          '牛肉を戻し入れ、醤油・たまり醤油少々を回し入れ、強火で10秒一気に炒め合わせて完成です。'
+        ]
+      },
+      {
+        id: 'heijiao_niurouli',
+        name: 'サイコロステーキの黒こしょう炒め',
+        category: '牛肉・羊肉料理',
+        time: '15分',
+        requiredGroups: [
+          { label: '牛角切り・サイコロ', options: ['牛角切り・サイコロ'] },
+          { label: '玉ねぎ', options: ['玉ねぎ'] },
+          { label: 'ピーマン・エリンギ', options: ['ピーマン・ししとう', 'エリンギ'] }
+        ],
+        substitutes: 'エリンギを角切りにして先に焼き付けてから牛肉と合わせると、ジューシーな食感が楽しめます。パプリカを加えても彩り豊かです。',
+        prepTips: '牛肉に粗挽き黒こしょう・醤油・オイスターソース・片栗粉を揉み込み、油を絡めて15分置きます。',
+        steps: [
+          'フライパンに油を熱し、牛肉を入れて15秒ほど焼き固めてから転がすように焼き、8割火が通ったら取り出します。',
+          '同じフライパンで玉ねぎとピーマン（またはエリンギ）を中強火で1分ほど香ばしく炒めます。',
+          '牛肉を戻し入れ、黒こしょうをたっぷり挽き、醤油・オイスターソース（お好みでバター少々）を加えます。',
+          '強火で手早く炒め合わせたら完成です。'
+        ]
+      },
+      {
+        id: 'jinzhengu_feiniu',
+        name: '牛バラとえのきの酸湯（サンタン）煮込み',
+        category: '牛肉・羊肉料理',
+        time: '15分',
+        requiredGroups: [
+          { label: '牛バラ薄切り', options: ['牛バラ薄切り'] },
+          { label: 'えのき・酸菜・幅広春雨', options: ['えのきだけ', '高菜・酸菜（発酵白菜）', '板春雨（幅広春雨）', 'ミニ白菜'] }
+        ],
+        substitutes: 'ラム薄切り肉でも代用可。底にえのき、ミニ白菜、もやし、幅広春雨などを敷くとスープを吸って美味しく食べられます。',
+        prepTips: 'えのきは石づきを切り落としてほぐします。牛バラ薄切りは酒を入れたお湯でサッと下茹でしてアクを取っておくと上品に仕上がります。',
+        steps: [
+          '塩少々を入れたお湯でえのき（および戻した幅広春雨）を茹で、器の底に敷いておきます。',
+          'フライパンに少量の油を熱し、にんにく・しょうが・赤唐辛子（あれば酸菜）を炒めて香りを出します。',
+          '水（300ml）・醤油・オイスターソース・酢・砂糖・白こしょうを入れて煮立たせます。',
+          '下茹でした牛バラ肉を入れて30秒ほど煮て味を馴染ませ、スープごと器に注ぎます。'
+        ]
+      },
+      {
+        id: 'tudou_niurou',
+        name: '牛すね肉とじゃがいもの中華風煮込み',
+        category: '牛肉・羊肉料理',
+        time: '60分',
+        requiredGroups: [
+          { label: '牛すね・カレー用角切り', options: ['牛すね・カレー用角切り'] },
+          { label: 'じゃがいも', options: ['じゃがいも'] }
+        ],
+        substitutes: 'にんじんや玉ねぎ、ピーマンを加えると栄養バランスも彩りもアップします。',
+        prepTips: '牛肉は下茹でしてアクを洗い流します。じゃがいもは大きめの乱切りにします。',
+        steps: [
+          '鍋に油を熱し、しょうが・長ねぎ・八角・シナモン・ローリエを炒め、牛肉を加えて表面を焼き固めます。',
+          '豆板醤（お好みで）・醤油・たまり醤油・酒・氷砂糖を加えて炒め合わせます。',
+          'かぶるくらいの熱湯を注ぎ、フタをして弱火で45〜50分、お肉が柔らかくなるまでコトコト煮込みます。',
+          'じゃがいも（とにんじん）と塩少々を加え、さらに15分煮込んで煮汁を軽く煮詰めたら完成です。'
+        ]
+      },
+      {
+        id: 'congbao_yangrou',
+        name: '北京風・ラム肉と長ねぎの強火炒め（葱爆羊肉）',
+        category: '牛肉・羊肉料理',
+        time: '10分',
+        requiredGroups: [
+          { label: 'ラム薄切り肉', options: ['ラム薄切り肉'] },
+          { label: '長ねぎ・玉ねぎ', options: ['長ねぎ', '玉ねぎ'] }
+        ],
+        substitutes: '長ねぎの白い部分を斜め厚切りにするのが定番。クミンパウダーを振るとスパイシーな風味に変化します。',
+        prepTips: '解凍したラム肉は水気をよく拭き取り、醤油・たまり醤油・酒・片栗粉・ごま油を揉み込んでおきます。',
+        steps: [
+          '多めの油を煙が出る直前まで熱し、ラム肉を一気に加えて強火でほぐしながら8割ほど炒めます。',
+          '斜め切りにした長ねぎと千切りしょうがを全量加え、強火のまま20秒ほど一気に煽り炒めます。',
+          '鍋肌から醤油・酢少々・砂糖少々（お好みでクミンパウダー）を回し入れます。',
+          '全体に味が絡んだらすぐにお皿に盛ります（炒めすぎると水が出て硬くなるので手早く仕上げます）。'
+        ]
+      },
+      {
+        id: 'qinjiao_niurousi',
+        name: '牛肉の細切りとピーマン炒め',
+        category: '牛肉・羊肉料理',
+        time: '12分',
+        requiredGroups: [
+          { label: '牛肉細切り', options: ['牛肉細切り', '牛ロース薄切り'] },
+          { label: 'ピーマン・ししとう', options: ['ピーマン・ししとう'] }
+        ],
+        substitutes: '玉ねぎやにんじん、セロリの細切りを加えても美味しくいただけます。',
+        prepTips: '牛肉は繊維を断つように細切りにし、醤油・オイスターソース・黒こしょう・片栗粉・サラダ油を揉み込んで15分置きます。',
+        steps: [
+          'フライパンに油を熱し、牛肉をほぐしながらサッと炒め、色が変わったらすぐに取り出します。',
+          '残った油でにんにくを炒め、細切りにしたピーマンを強火で40秒ほど炒めて塩少々を振ります。',
+          '牛肉を戻し入れ、醤油とオイスターソースを加えて強火で15秒炒め合わせます。'
+        ]
+      },
+      {
+        id: 'heijiao_niuzaigu',
+        name: '骨付きカルビと玉ねぎの黒こしょう焼き',
+        category: '牛肉・羊肉料理',
+        time: '18分',
+        requiredGroups: [
+          { label: '骨付きカルビ', options: ['骨付きカルビ'] },
+          { label: '玉ねぎ', options: ['玉ねぎ'] }
+        ],
+        substitutes: 'エリンギやパプリカを一緒に焼いても美味です。',
+        prepTips: '骨付きカルビは骨に沿って食べやすく切り、キッチンペーパーで水気を拭いて黒こしょう・醤油・オイスターソース・酒・片栗粉で20分下味をつけます。',
+        steps: [
+          'フライパンに油（お好みでバター）を熱し、骨付きカルビを中強火で両面1分半ずつ香ばしく焼き、一度取り出します。',
+          '同じフライパンでくし切りにした玉ねぎとにんにくを炒めます。',
+          'お肉を戻し入れ、醤油・オイスターソース・黒こしょう・水少々を加えて強火で20秒ほど煮絡めます。'
+        ]
+      },
+
+      // ================= 鶏肉・鴨肉・魚介料理 =================
+      {
+        id: 'gongbao_jiding',
+        name: '鶏肉とピーナッツの甘辛炒め（宮保鶏丁）',
+        category: '鶏肉・魚介料理',
+        time: '18分',
+        requiredGroups: [
+          { label: '鶏むね・もも角切り', options: ['鶏むね角切り', '鶏むね薄切り', '骨付き鶏ももぶつ切り'] },
+          { label: 'ピーナッツ', options: ['ピーナッツ'] },
+          { label: 'きゅうり・にんじん・長ねぎ', options: ['きゅうり', 'にんじん', '長ねぎ'] }
+        ],
+        substitutes: '家庭版ではきゅうりやにんじんの角切り、長ねぎを加えるのが定番。鶏もも肉を使うとよりジューシーになります。',
+        prepTips: '鶏肉は1.5cm角に切り、酒・醤油・塩・片栗粉を揉み込みます。合わせ調味料（酢大さじ2：砂糖大さじ2：醤油大さじ1.5：たまり醤油少々：片栗粉小さじ1：水大さじ2）を作っておきます。',
+        steps: [
+          'フライパンに油を熱し、下味をつけた鶏肉を白っぽくなるまで炒めて一度取り出します。',
+          '弱火で唐辛子・花椒・にんにく・しょうがを炒めて香りを引き出します。',
+          'ぶつ切りにした長ねぎ（ときゅうり・にんじん）を加えて強火で30秒炒めます。',
+          '鶏肉を戻し入れ、合わせ調味料を回し入れてとろみがつくまで炒め、最後にピーナッツを加えてサッと混ぜたら完成です（ピーナッツのカリッと感を残すため最後に入れます）。'
+        ]
+      },
+      {
+        id: 'laziji',
+        name: '鶏肉の唐辛子カリカリ炒め（辣子鶏丁）',
+        category: '鶏肉・魚介料理',
+        time: '25分',
+        requiredGroups: [
+          { label: '鶏ももぶつ切り・鶏むね角切り', options: ['骨付き鶏ももぶつ切り', '鶏むね角切り', '手羽中'] },
+          { label: 'ピーマン・玉ねぎ（香り付け）', options: ['ピーマン・ししとう', '玉ねぎ', 'じゃがいも'] }
+        ],
+        substitutes: '細切りにして揚げたじゃがいもやれんこんを一緒に炒めても、麻辣の風味が絡んでおつまみに最適です。',
+        prepTips: '一口大に切った鶏肉に、酒・醤油・塩・花椒パウダー・しょうが・ねぎを揉み込んで20分置き、片栗粉を薄くまぶします。',
+        steps: [
+          '170℃の油で鶏肉を5分ほど揚げて火を通し、一度取り出します。油温を190℃に上げて30秒ほど二度揚げし、カリッと仕上げます。',
+          '少量の油を残したフライパンで、たっぷりの唐辛子・花椒・にんにく・しょうがを弱火で焦がさないように炒めます。',
+          '揚げた鶏肉を戻し入れ、砂糖少々・塩・クミンパウダーを加えて強火で1分炒め合わせます。',
+          '仕上げにねぎやピーマンを散らしてサッと混ぜれば完成です。'
+        ]
+      },
+      {
+        id: 'huangmenji',
+        name: '鶏肉としいたけの醤油煮込み（黄燜鶏）',
+        category: '鶏肉・魚介料理',
+        time: '30分',
+        requiredGroups: [
+          { label: '鶏ももぶつ切り・手羽中', options: ['骨付き鶏ももぶつ切り', '手羽中', '鶏もも肉'] },
+          { label: 'しいたけ', options: ['しいたけ'] }
+        ],
+        substitutes: 'じゃがいもやピーマンを加えるのが定番の食べ方。きくらげや湯葉、えのきを入れても美味しく煮込めます。',
+        prepTips: '鶏肉は一口大に切り、干ししいたけを使う場合はぬるま湯で戻して戻し汁も取っておきます。',
+        steps: [
+          '鍋に油と氷砂糖（または砂糖）を入れて溶かし、鶏肉を入れて中強火で表面に焼き色がつくまで炒めます。',
+          'しょうが・長ねぎ・唐辛子・しいたけを加えて炒め、醤油・たまり醤油・オイスターソース・酒を回し入れます。',
+          'しいたけの戻し汁（または水）を具材がかぶる程度注ぎ、フタをして中弱火で15分煮込みます。',
+          'じゃがいもを加えてさらに10分煮込み、最後にピーマンを入れて強火で煮汁を煮詰めたら完成です。'
+        ]
+      },
+      {
+        id: 'kele_jichi',
+        name: '手羽中のコーラ煮（可楽鶏翅）',
+        category: '鶏肉・魚介料理',
+        time: '25分',
+        requiredGroups: [
+          { label: '手羽中', options: ['手羽中'] }
+        ],
+        substitutes: 'じゃがいもやうずらの卵を一緒に煮込むと、甘辛いタレが染みてとても美味しくなります。',
+        prepTips: '手羽中は味が染みやすいよう切り込みを入れ、水気よく拭き取っておきます。',
+        steps: [
+          'フライパンに少量の油を熱し、手羽中の皮目を下にして並べて中弱火で両面こんがり焼き色をつけます。',
+          'しょうが・長ねぎを加えて香りを出し、醤油・たまり醤油少々・オイスターソースを絡めます。',
+          'コーラ1缶（約330ml、手羽中が浸かる程度）を注ぎ、沸騰したらフタをして中弱火で15分煮込みます。',
+          'フタを取り、強火にして鍋を揺すりながら煮汁に照りが出るまで煮詰めたら完成です。'
+        ]
+      },
+      {
+        id: 'suanla_jizhen',
+        name: '砂肝とピーマンのピリ辛酸辣炒め',
+        category: '鶏肉・魚介料理',
+        time: '15分',
+        requiredGroups: [
+          { label: '砂肝', options: ['砂肝'] },
+          { label: 'ピーマン・セロリ・にんにくの芽', options: ['ピーマン・ししとう', 'セロリ', 'にんにくの芽'] }
+        ],
+        substitutes: 'セロリやにんにくの芽、玉ねぎと合わせてもシャキシャキ食感とコリコリ食感が楽しめます。',
+        prepTips: '砂肝は銀皮を取り除いて薄切り（または格子状の切り込み）にし、酒・醤油・白こしょう・片栗粉を揉み込んで10分置きます。',
+        steps: [
+          '多めの油を熱したフライパンに砂肝を入れ、強火で30秒ほど一気に炒め、色が変わったらすぐに取り出します（炒めすぎると硬くなります）。',
+          '残った油でにんにく・しょうが・赤唐辛子を炒め、ピーマン（またはセロリ）を加えて40秒炒めます。',
+          '砂肝を戻し入れ、醤油・酢・オイスターソース・砂糖少々を鍋肌から回し入れます。',
+          '強火で15秒ほど手早く炒め合わせたら完成です。'
+        ]
+      },
+      {
+        id: 'pijiuya',
+        name: '鴨肉のビール煮込み（啤酒鴨）',
+        category: '鶏肉・魚介料理',
+        time: '40分',
+        requiredGroups: [
+          { label: '鴨ももぶつ切り', options: ['鴨ももぶつ切り'] },
+          { label: 'ピーマン・じゃがいも・玉ねぎ', options: ['ピーマン・ししとう', 'じゃがいも', '玉ねぎ'] }
+        ],
+        substitutes: 'じゃがいもやピーマンと好相性。鴨肉特有のクセを抑えるため、しょうが・にんにく・ビールをたっぷり使うのがコツです。',
+        prepTips: '鴨肉はしょうが・ねぎ・酒を入れた水から5分ほど下茹でしてアクを洗い流し、水気を拭きます。',
+        steps: [
+          '油をひかないフライパンに鴨肉を入れ、中弱火で5分ほど乾煎りして余分な脂を出し、出てきた脂は拭き取ります。',
+          'しょうが・にんにく・唐辛子・八角・豆板醤を加えて赤い油が出るまで炒めます。',
+          '醤油・たまり醤油・オイスターソースを絡め、ビール1缶（350ml）を注ぎます。',
+          '沸騰したら弱火にしてフタをし、30分ほど柔らかくなるまで煮込み、仕上げにピーマンを入れて強火で煮汁を煮詰めます。'
+        ]
+      },
+      {
+        id: 'xiaochaoyaxue',
+        name: '鴨血（ヤーシュエ）とニラのピリ辛炒め',
+        category: '鶏肉・魚介料理',
+        time: '15分',
+        requiredGroups: [
+          { label: '鴨血（ヤーシュエ）', options: ['鴨血（ヤーシュエ）'] },
+          { label: 'ニラ・葉にんにく・セロリ', options: ['ニラ', '葉にんにく', 'セロリ'] }
+        ],
+        substitutes: '葉にんにくやセロリ、もやしで代用しても美味しく仕上がります。',
+        prepTips: '鴨血は厚めのスライスにし、塩と酒を入れた水から弱火で2分ほど下茹ですると崩れにくくなります。',
+        steps: [
+          'フライパンに油を熱し、にんにく・しょうが・豆板醤・唐辛子を炒めて香りを出します。',
+          '水気を切った鴨血をそっと入れ、水（100ml）・醤油・オイスターソース・白こしょうを加えて中火で2分煮ます。',
+          '水溶き片栗粉で軽くとろみをつけ、汁気を鴨血に絡めます。',
+          'ざく切りにしたニラを加え、強火で15秒サッと炒め合わせたら完成です。'
+        ]
+      },
+      {
+        id: 'xiaren_huadan',
+        name: 'プリプリむきえびのふんわり卵炒め',
+        category: '鶏肉・魚介料理',
+        time: '10分',
+        requiredGroups: [
+          { label: 'むきえび', options: ['むきえび'] },
+          { label: '卵', options: ['卵'] }
+        ],
+        substitutes: '刻みねぎやニラのみじん切りを卵液に混ぜると風味と彩りがアップします。',
+        prepTips: 'むきえびは背ワタを取り、塩・白こしょう・酒・片栗粉少々を揉み込んで10分置きます。卵4個に水大さじ2と塩少々を加えて溶くとフワフワになります。',
+        steps: [
+          '少量の油を熱したフライパンでえびを中火で炒め、赤く丸まったら（8割火が通ったら）取り出します。',
+          '取り出したえびを溶き卵に入れ、刻みねぎと一緒に軽く混ぜます。',
+          'フライパンに油を熱して中弱火にし、えび入りの卵液を流し入れ、底が固まってきたらヘラで大きく内側に寄せるように混ぜます。',
+          '半熟のツヤが残るくらいで火を止め、余熱で仕上げてお皿に盛ります。'
+        ]
+      },
+      {
+        id: 'xiaren_xilanhua_qinggua',
+        name: 'むきえびと彩り野菜の塩炒め',
+        category: '鶏肉・魚介料理',
+        time: '12分',
+        requiredGroups: [
+          { label: 'むきえび', options: ['むきえび'] },
+          { label: 'きゅうり・山芋・にんじん', options: ['きゅうり', '山芋・長芋', 'にんじん', 'セロリ'] }
+        ],
+        substitutes: 'きゅうり、長芋、にんじん、セロリなどを自由に組み合わせて作れる、あっさり上品な一品です。',
+        prepTips: 'えびは酒・塩・白こしょう・片栗粉で下味をつけます。長芋やにんじんは薄切りにして30秒ほどサッと下茹でしておきます。',
+        steps: [
+          'フライパンに油を熱し、えびが赤くなるまで炒めて一度取り出します。',
+          'にんにくの薄切りを炒め、きゅうり（および下茹でしたにんじん・長芋）を加えて強火で30秒炒めます。',
+          'えびを戻し入れ、塩・砂糖少々・鶏がらスープの素で味を調え、水溶き片栗粉を少し回し入れてツヤを出します。'
+        ]
+      },
+      {
+        id: 'yaxiong_shishu',
+        name: '鴨ロースと野菜の黒こしょう炒め',
+        category: '鶏肉・魚介料理',
+        time: '15分',
+        requiredGroups: [
+          { label: '鴨ロース薄切り', options: ['鴨ロース薄切り'] },
+          { label: '玉ねぎ・ピーマン・セロリ', options: ['玉ねぎ', 'ピーマン・ししとう', 'セロリ', '長ねぎ'] }
+        ],
+        substitutes: 'スモーク鴨ロースを使う場合は下味不要でそのままサッと炒められます。',
+        prepTips: '生の鴨ロースは薄切りにし、酒・醤油・黒こしょう・片栗粉を揉み込んで15分置きます。',
+        steps: [
+          'フライパンに油を熱し、鴨ロースを強火でサッと炒めて色が変わったら取り出します。',
+          'にんにく・しょうがを炒め、玉ねぎやピーマン（またはセロリ）を加えて強火で1分炒めます。',
+          '鴨ロースを戻し入れ、醤油・オイスターソース・黒こしょうを加えて強火で15秒炒め合わせます。'
+        ]
+      },
+      {
+        id: 'boluo_gulaorou',
+        name: 'パイナップル入り酢豚（菠蘿咕咾肉）',
+        category: '鶏肉・魚介料理',
+        time: '20分',
+        requiredGroups: [
+          { label: 'パイナップル', options: ['パイナップル'] },
+          { label: '豚ロース・鶏むね・豚バラ', options: ['鶏むね角切り', '豚ロース薄切り', '豚バラブロック'] },
+          { label: 'ピーマン・パプリカ・玉ねぎ', options: ['ピーマン・ししとう', 'パプリカ', '玉ねぎ'] }
+        ],
+        substitutes: '鶏むね肉で作れば「パイナップル酢鶏」に。ピーマンやパプリカ、玉ねぎと合わせると彩り鮮やかです。',
+        prepTips: '一口大に切ったお肉に塩・酒を揉み込み、片栗粉をたっぷりまぶします。甘酢あん（ケチャップ大さじ3：砂糖大さじ2：酢大さじ2：醤油大さじ1：水大さじ3）を混ぜておきます。',
+        steps: [
+          '170℃の油でお肉を3分ほど揚げて一度取り出し、190℃に上げて30秒ほど二度揚げしてカリッとさせます。',
+          '少量の油を残したフライパンに甘酢あんを入れ、弱火で煮立たせてとろみをつけます（必要に応じて水溶き片栗粉を追加）。',
+          '揚げたお肉、一口大のパイナップル、パプリカ、玉ねぎを一気に投入します。',
+          '強火で15秒ほど手早く全体を絡めたら完成です。'
+        ]
+      },
+      {
+        id: 'hongshao_daiyu',
+        name: '太刀魚のこんがり焼き・中華風煮付け',
+        category: '鶏肉・魚介料理',
+        time: '25分',
+        requiredGroups: [
+          { label: '太刀魚', options: ['太刀魚'] }
+        ],
+        substitutes: '両面をこんがり焼いて塩こしょう・クミンを振れば「塩焼き」に、香味ダレで煮込めば「中華風煮付け」になります。',
+        prepTips: '太刀魚は7cm幅に切って切り込みを入れ、しょうが・ねぎ・酒・塩・白こしょうで15分下味をつけます。焼く直前に水気を拭き、薄く片栗粉をはたきます。',
+        steps: [
+          'フライパンに多めの油を熱し、太刀魚を並べて中弱火で2分焼き、裏返してさらに2分、両面きつね色にカリッと焼きます。',
+          '魚を端に寄せ、しょうが・にんにく・長ねぎ・唐辛子を入れて香りを立てます。',
+          '酒・醤油・たまり醤油・酢・砂糖少々を鍋肌から回し入れます。',
+          '熱湯（100ml）を注ぎ、フタをして中弱火で5分煮含め、最後に強火で煮汁を煮詰めます。'
+        ]
+      },
+      {
+        id: 'hongshao_liyu',
+        name: '川魚（鯉など）の丸ごと中華風煮込み',
+        category: '鶏肉・魚介料理',
+        time: '35分',
+        requiredGroups: [
+          { label: '鯉・川魚', options: ['鯉・川魚'] }
+        ],
+        substitutes: '煮込む際に酸菜（発酵白菜）や木綿豆腐、幅広春雨を一緒に入れると魚の旨味を吸って絶品になります。',
+        prepTips: '魚はウロコと内臓を取って切り込みを入れ、水気を拭いて薄く片栗粉をはたきます。フライパンを熱して油をなじませてから焼くと皮が剥がれません。',
+        steps: [
+          'フライパンに油を熱し、魚を入れて中弱火で3分焼き、焼き色がついたらそっと裏返してもう片面も2分焼きます。',
+          'しょうが・にんにく・長ねぎ・八角・豆板醤（お好みで）を加えて香りを出します。',
+          '酒・醤油・たまり醤油・酢・砂糖少々を回し入れ、魚が半分浸かるくらいの熱湯を注ぎます。',
+          'フタをして中火で15分煮込み（途中で煮汁を魚にかけながら、豆腐や春雨を入れる場合はここで追加）、最後に強火で煮汁を煮詰めます。'
+        ]
+      },
+
+      // ================= 卵・大豆製品・きのこ料理 =================
+      {
+        id: 'mapo_doufu',
+        name: '本格・麻婆豆腐（マーボードーフ）',
+        category: '卵・豆腐・きのこ',
+        time: '15分',
+        requiredGroups: [
+          { label: '絹ごし豆腐・木綿豆腐', options: ['絹ごし豆腐', '木綿豆腐'] },
+          { label: '豚ひき肉', options: ['豚ひき肉'] }
+        ],
+        substitutes: 'お肉なしでも、刻んだしいたけで代用しても美味しく作れます。仕上げに葉にんにくや花椒パウダーを振ると本格派に。',
+        prepTips: '豆腐は2cm角に切り、塩少々を入れた水から弱火で2分ほど下茹でしてザルに上げると、煮崩れしにくくなります。',
+        steps: [
+          'フライパンに油を熱して豚ひき肉を炒め、豆板醤・にんにく・しょうがのみじん切りを加えて弱火で赤い油が出るまで炒めます。',
+          '水（200ml）・醤油・たまり醤油・砂糖少々を加えて煮立たせます。',
+          '水切りした豆腐をそっと入れ、お玉の背で優しく押すようにしながら中火で3〜4分煮込みます。',
+          '水溶き片栗粉を2回に分けて回し入れ、とろみがついたら刻みねぎと花椒パウダーを振って完成です。'
+        ]
+      },
+      {
+        id: 'hongshao_doufu',
+        name: '焼き豆腐のオイスター煮込み（紅焼豆腐）',
+        category: '卵・豆腐・きのこ',
+        time: '18分',
+        requiredGroups: [
+          { label: '木綿豆腐・厚揚げ', options: ['木綿豆腐', '厚揚げ・油揚げ', '高野豆腐・凍り豆腐'] }
+        ],
+        substitutes: '豚バラ薄切り、しいたけ、きくらげ、ピーマンなどを一緒に煮込むと、お肉に負けない満足感のあるおかずになります。',
+        prepTips: '木綿豆腐は厚さ8mmほどに切り、合わせ調味料（醤油大さじ2：たまり醤油少々：オイスターソース大さじ1：砂糖小さじ1：片栗粉小さじ1：水100ml）を用意します。',
+        steps: [
+          'フライパンに油を熱して塩少々を振り（くっつき防止）、豆腐を並べて中弱火で両面きつね色になるまで焼いて取り出します。',
+          '同じフライパンでにんにく・ねぎを炒めます（お肉やきのこを入れる場合はここで炒めます）。',
+          '焼いた豆腐とピーマンを戻し入れ、合わせ調味料を回し入れます。',
+          '中火で2分ほど煮絡め、とろみがついたタレが豆腐にしっかり絡んだら完成です。'
+        ]
+      },
+      {
+        id: 'jianjiao_gandoufu',
+        name: '干し豆腐とピーマンのとろみ炒め（尖椒干豆腐）',
+        category: '卵・豆腐・きのこ',
+        time: '15分',
+        requiredGroups: [
+          { label: '干し豆腐（シート・細切り）', options: ['干し豆腐（シート）', '干し豆腐（細切り）'] },
+          { label: 'ピーマン・ししとう', options: ['ピーマン・ししとう'] }
+        ],
+        substitutes: '豚バラ薄切りを少し加えてコクを出すのもおすすめ。にんじんの細切りを加えても彩りが良くなります。',
+        prepTips: '干し豆腐は食べやすい大きさに切り、塩少々を入れた熱湯で1分ほどサッと茹でると驚くほど柔らかく滑らかになります。',
+        steps: [
+          'フライパンに油を熱してにんにく・ねぎを炒めます（豚肉を入れる場合はここで炒めて脂を出します）。',
+          '湯通しした干し豆腐を加えてサッと炒め、醤油・オイスターソース・水（100ml）を加えて弱火で1分煮ます。',
+          '乱切りにしたピーマンと塩・鶏がらスープの素少々を加え、30秒ほど炒めます。',
+          '水溶き片栗粉でとろみをつけ、仕上げにおろしにんにくを少し加えると風味が引き立ちます。'
+        ]
+      },
+      {
+        id: 'qincai_xianggan',
+        name: 'セロリと押し豆腐のシャキシャキ炒め',
+        category: '卵・豆腐・きのこ',
+        time: '12分',
+        requiredGroups: [
+          { label: '押し豆腐・干し豆腐', options: ['押し豆腐・厚切り干豆腐', '干し豆腐（シート）', '干し豆腐（細切り）'] },
+          { label: 'セロリ', options: ['セロリ'] }
+        ],
+        substitutes: '豚肉の細切りを少し加えても美味。にんじんやパプリカの細切りを加えると彩り豊かになります。',
+        prepTips: 'セロリは筋を取って斜め薄切りにし、油数滴を入れた熱湯で20秒サッと湯通しすると色鮮やかに仕上がります。押し豆腐は薄切りにします。',
+        steps: [
+          'フライパンに油を熱し、にんにく・唐辛子を炒めます（お肉を入れる場合はここで炒めます）。',
+          '押し豆腐を加え、中火で1分ほど香ばしく焼き付けるように炒めます。',
+          'セロリを加えて強火で30秒炒め、醤油・オイスターソース・塩少々で調味して手早く絡めます。'
+        ]
+      },
+      {
+        id: 'xihongshi_chaojidan',
+        name: '定番・トマトと卵の中華炒め',
+        category: '卵・豆腐・きのこ',
+        time: '10分',
+        requiredGroups: [
+          { label: 'トマト', options: ['トマト'] },
+          { label: '卵', options: ['卵'] }
+        ],
+        substitutes: 'むきえびや絹ごし豆腐を加えてボリュームアップするのも人気です。仕上げに刻みねぎを散らすと香り豊かに。',
+        prepTips: '卵に塩少々と水大さじ1を加えて溶くとふんわりします。トマトは半分を小さめに（ソース用）、半分を大きめのくし切りに（食感用）切ります。',
+        steps: [
+          '多めの油を熱したフライパンに溶き卵を流し入れ、大きくふんわり炒めて一度取り出します。',
+          '残った油でねぎを炒め、小さめに切ったトマトと塩少々を入れて中火で炒め、とろっとしたトマトソース状になったら残りのトマトを加えます。',
+          '卵を戻し入れ、砂糖小さじ1を加えてトマトの酸味をまろやかにします。',
+          '強火で20秒ほど卵にトマトの旨味を吸わせ、刻みねぎを散らして完成です。'
+        ]
+      },
+      {
+        id: 'jiucai_chaojidan',
+        name: 'シンプル絶品・ニラ玉炒め',
+        category: '卵・豆腐・きのこ',
+        time: '8分',
+        requiredGroups: [
+          { label: 'ニラ', options: ['ニラ'] },
+          { label: '卵', options: ['卵'] }
+        ],
+        substitutes: 'むきえびや桜えび、細切り干し豆腐を加えると旨味がグッと増します。',
+        prepTips: 'ニラは洗ったあと水気をしっかり拭き取ってから4cm幅に切り、根元の茎と葉先を分けておきます。',
+        steps: [
+          '熱したフライパンに多めの油をひき、溶き卵をふんわり炒めて一度取り出します。',
+          '少量の油を足し、強火でまずニラの茎を15秒炒め、続けて葉先を加えて10秒サッと炒めます。',
+          '卵を戻し入れ、塩・鶏がらスープの素少々を加え、強火で10秒手早く炒め合わせます（水気が出ないよう短時間で仕上げます）。'
+        ]
+      },
+      {
+        id: 'muer_shanyao',
+        name: '長芋ときくらげのさっぱり塩炒め',
+        category: '卵・豆腐・きのこ',
+        time: '12分',
+        requiredGroups: [
+          { label: '山芋・長芋', options: ['山芋・長芋'] },
+          { label: 'きくらげ', options: ['きくらげ'] }
+        ],
+        substitutes: 'にんじんやパプリカ、むきえびを加えると彩りが美しく、おもてなしにもぴったりです。',
+        prepTips: '長芋は皮をむいて半月切りにし、酢水にさらして変色を防ぎます。長芋ときくらげは熱湯で1分ほど下茹でしてザルに上げます。',
+        steps: [
+          'フライパンに油を熱し、にんにくの薄切りを焦がさないように炒めて香りを出します。',
+          '下茹でした長芋ときくらげ（あればにんじん）を入れ、強火で30秒ほどサッと炒めます。',
+          '塩・砂糖少々・鶏がらスープの素で味を調え、水溶き片栗粉を少し回し入れてツヤを出したら完成です。'
+        ]
+      },
+      {
+        id: 'fuzhu_shaorou_shishu',
+        name: '湯葉（腐竹）ときくらげのオイスター炒め',
+        category: '卵・豆腐・きのこ',
+        time: '15分',
+        requiredGroups: [
+          { label: '湯葉（腐竹）', options: ['湯葉（腐竹）'] },
+          { label: 'きくらげ・ピーマン・にんじん', options: ['きくらげ', 'ピーマン・ししとう', 'にんじん', '豚バラ薄切り'] }
+        ],
+        substitutes: '豚バラ肉と一緒に煮込んでも、野菜と合わせて精進風に炒めても美味しくいただけます。',
+        prepTips: '乾燥湯葉（棒湯葉）は塩少々を入れたぬるま湯に2時間ほど浸して芯まで戻し、斜め切りにして熱湯で1分下茹でします。',
+        steps: [
+          'フライパンに油を熱し、にんにく・ねぎを炒めます（豚肉を入れる場合はここで炒めます）。',
+          'にんじん・ピーマン・きくらげを加えて強火で40秒炒めます。',
+          '下茹でした湯葉を加え、醤油・オイスターソース・塩・砂糖少々で調味します。',
+          '強火で30秒ほど炒め合わせ、水溶き片栗粉で軽くとろみをつけたら完成です。'
+        ]
+      },
+      {
+        id: 'haoyou_shuanggu',
+        name: '2種きのこのオイスターソース炒め',
+        category: '卵・豆腐・きのこ',
+        time: '15分',
+        requiredGroups: [
+          { label: 'しいたけ・エリンギ・ひらたけ', options: ['しいたけ', 'エリンギ', 'ひらたけ・マッシュルーム'] },
+          { label: 'ピーマン・玉ねぎ・青梗菜', options: ['ピーマン・ししとう', '玉ねぎ', '小松菜・青梗菜', 'にんじん'] }
+        ],
+        substitutes: 'しいたけ、エリンギ、ひらたけ、マッシュルームなどお好みのきのこを複数組み合わせると旨味が倍増します。',
+        prepTips: 'エリンギは乱切りまたは厚切り、しいたけはそぎ切りにすると味がよく絡みます。',
+        steps: [
+          'フライパンに少量の油を熱し、きのこを入れて中強火で2〜3分、焼き目がついて香ばしくなるまでしっかり炒めます。',
+          'にんにく・ねぎ・ピーマン（または玉ねぎ）を加えて強火で30秒炒めます。',
+          'オイスターソース・醤油・たまり醤油少々・砂糖・水少々を加えて煮立たせます。',
+          '水溶き片栗粉でとろみをつけ、きのこにタレをしっかり絡めたら完成です。'
+        ]
+      },
+      {
+        id: 'yiner_chao_shishu',
+        name: '白きくらげと彩り野菜のさっぱり炒め',
+        category: '卵・豆腐・きのこ',
+        time: '12分',
+        requiredGroups: [
+          { label: '白きくらげ', options: ['白きくらげ'] },
+          { label: 'さやえんどう・きゅうり・にんじん', options: ['さやえんどう', 'きゅうり', 'にんじん', 'パプリカ', 'きくらげ', 'むきえび'] }
+        ],
+        substitutes: '水で戻した白きくらげのコリコリした食感が魅力。さやえんどうやきゅうり、むきえびと合わせると上品な一皿になります。',
+        prepTips: '乾燥白きくらげは水で1時間戻して硬い石づきを取り、一口大にちぎって熱湯で30秒サッと茹でて水気を切ります。',
+        steps: [
+          'フライパンに少量の油を熱し、にんにくを炒めます（えびを入れる場合はここでサッと炒めます）。',
+          '白きくらげ、さやえんどう（またはきゅうり）、にんじんを加えて強火で30秒炒めます。',
+          '塩・砂糖少々・鶏がらスープの素で調味し、水溶き片栗粉で軽くとろみをつけたら完成です。'
+        ]
+      },
+
+      // ================= 野菜メインのスピード料理 =================
+      {
+        id: 'suanla_tudousi',
+        name: 'じゃがいものシャキシャキ酸辣炒め（酸辣土豆絲）',
+        category: '野菜メイン',
+        time: '10分',
+        requiredGroups: [
+          { label: 'じゃがいも', options: ['じゃがいも'] },
+          { label: 'ピーマン・ししとう', options: ['ピーマン・ししとう'] }
+        ],
+        substitutes: 'にんじんの細切りを加えると彩りアップ。酸味や辛味が苦手な方は酢と唐辛子を抜いて「塩きんぴら風」にしても美味です。',
+        prepTips: '細切りにしたじゃがいもは水に2〜3回さらしてデンプンを洗い流し、ザルに上げて水気をよく切ることがシャキシャキ食感の秘訣です。',
+        steps: [
+          'フライパンに油を熱し、弱火で花椒と唐辛子を炒めて香りを出し、にんにくを加えます。',
+          '強火にして水気を切ったじゃがいもを一気に炒め、鍋肌から酢大さじ1を回し入れます（酢の効果で食感がシャキッとします）。',
+          '細切りピーマンを加えて強火で30秒炒め、塩・砂糖少々・鶏がらスープの素で味を調えます。',
+          '仕上げにもう一度酢を少々回し入れてサッと混ぜたら完成です。'
+        ]
+      },
+      {
+        id: 'shousi_baocai',
+        name: 'ちぎりキャベツのピリ辛強火炒め（手撕包菜）',
+        category: '野菜メイン',
+        time: '10分',
+        requiredGroups: [
+          { label: 'キャベツ', options: ['キャベツ'] }
+        ],
+        substitutes: '豚バラ肉やベーコンを少し加えて脂を引き出してから炒めると、さらにコクと旨味が増します。',
+        prepTips: 'キャベツは包丁ではなく手で一口大にちぎると断面から味が染みやすくなります。洗ったあとは水気をしっかり切っておきます。',
+        steps: [
+          'フライパンに油を熱し、弱火で花椒・唐辛子・にんにくを炒めて香りを出します。',
+          '強火にしてまずキャベツの芯の部分を20秒炒め、続けて葉の部分を全量入れて40秒一気に炒めます。',
+          '鍋肌から醤油・酢・オイスターソース・砂糖・塩少々を回し入れます。',
+          '強火のまま15秒ほど手早く煽り炒め、水気が出る前にお皿に盛ります。'
+        ]
+      },
+      {
+        id: 'disanxian',
+        name: 'なす・じゃがいも・ピーマンの甘辛炒め（地三鮮）',
+        category: '野菜メイン',
+        time: '20分',
+        requiredGroups: [
+          { label: 'じゃがいも', options: ['じゃがいも'] },
+          { label: 'なす', options: ['なす'] },
+          { label: 'ピーマン・ししとう', options: ['ピーマン・ししとう'] }
+        ],
+        substitutes: '東北地方の定番家庭料理。トマトの角切りを少し加えると後味がさっぱりします。',
+        prepTips: 'なすは乱切りにして塩を振って10分置き、水気を絞って薄く片栗粉をまぶします。合わせ調味料（醤油大さじ2：たまり醤油少々：オイスターソース大さじ1：砂糖大さじ1：片栗粉小さじ1：水100ml）を用意します。',
+        steps: [
+          'フライパンに少し多めの油を熱し、乱切りにしたじゃがいもを中弱火で全面こんがり火が通るまで揚げ焼きにして取り出します。',
+          '残った油でなすを柔らかくなるまで炒め、最後にピーマンを加えて15秒サッと油通しして一緒に取り出します。',
+          '油を少し残してにんにく・ねぎを炒め、合わせ調味料を入れて煮立たせとろみをつけます。',
+          '野菜をすべて戻し入れ、強火でタレを全体に絡めたら完成です。'
+        ]
+      },
+      {
+        id: 'ganbian_sijidou',
+        name: 'いんげんのピリ辛乾煎り炒め（干煸四季豆）',
+        category: '野菜メイン',
+        time: '15分',
+        requiredGroups: [
+          { label: 'いんげん', options: ['いんげん'] }
+        ],
+        substitutes: '豚ひき肉を少し加えて一緒に炒めると、ご飯が止まらないメインおかずになります。',
+        prepTips: 'いんげんは筋を取って5cm長さに切り、水気をよく拭きます。食中毒防止のため、中までしっかり火を通してください。',
+        steps: [
+          'フライパンに少し多めの油を熱し、いんげんを入れて中火で4〜5分、皮にシワが寄って焼き色がつき、中まで火が通るまでじっくり炒めて取り出します。',
+          '油を少し残し、にんにく・しょうが・花椒・唐辛子を炒めて香りを出します（ひき肉を入れる場合はここで炒めます）。',
+          'いんげんを戻し入れ、醤油・砂糖少々・塩・鶏がらスープの素を加えます。',
+          '強火で30秒ほど炒め合わせ、シワに調味料が馴染んだら完成です。'
+        ]
+      },
+      {
+        id: 'suanrong_shishu',
+        name: '青菜のにんにく強火炒め（葉物野菜全般）',
+        category: '野菜メイン',
+        time: '6分',
+        requiredGroups: [
+          { label: '葉物野菜', options: ['ほうれん草', '小松菜・青梗菜', 'レタス', '油麦菜（ロメインレタス）', '空芯菜', '水菜', '春菊', 'ひゆ菜', 'しろ菜', 'ミニ白菜', '白菜', 'セロリ'] }
+        ],
+        substitutes: 'ほうれん草、小松菜、青梗菜、レタス、空芯菜、水菜、春菊など、あらゆる葉物野菜に応用できる万能レシピです！',
+        prepTips: 'にんにくのみじん切りを2回分（炒め用と仕上げ用）に分けます。ほうれん草などアクの強い野菜はサッと下茹でするとえぐみが抜けます。',
+        steps: [
+          'フライパンに油を熱し、半量のにんにく（お好みで唐辛子）を弱火できつね色になるまで炒めて香りを出します。',
+          '強火にして洗って水気を切った葉物野菜を一気に入れ、30〜45秒ほど手早く炒めます。',
+          '塩・砂糖少々で調味します（レタスや青梗菜の場合はオイスターソース大さじ1と醤油少々でも絶品）。',
+          '残りの生にんにくを散らして2秒ほどサッと混ぜたら、色鮮やかなうちにお皿に盛ります。'
+        ]
+      },
+      {
+        id: 'culiu_baicai',
+        name: '白菜の甘酢とろみ炒め（醋溜白菜）',
+        category: '野菜メイン',
+        time: '10分',
+        requiredGroups: [
+          { label: '白菜・ミニ白菜', options: ['白菜', 'ミニ白菜'] }
+        ],
+        substitutes: 'ミニ白菜は春雨とにんにくで蒸し煮にしても絶品。きくらげや豚バラ肉を加えても美味しく作れます。',
+        prepTips: '白菜は芯と葉に分け、芯は火が通りやすいようそぎ切りにします。合わせ調味料（酢大さじ2：醤油大さじ1.5：砂糖大さじ1：片栗粉小さじ1：塩少々）を用意します。',
+        steps: [
+          'フライパンに油を熱し、弱火で花椒・唐辛子・ねぎ・にんにくを炒めて香りを出します。',
+          '強火にしてまず白菜の芯を1分ほど半透明になるまで炒めます。',
+          '白菜の葉を加えて20秒炒め、よく混ぜた合わせ調味料を回し入れます。',
+          '甘酢あんが白菜全体にツヤよく絡んだら完成です。'
+        ]
+      },
+      {
+        id: 'qingchao_xilanhua_huacai',
+        name: 'カリフラワーのピリ辛炒め・ブロッコリーのにんにく炒め',
+        category: '野菜メイン',
+        time: '12分',
+        requiredGroups: [
+          { label: 'カリフラワー・ブロッコリー', options: ['カリフラワー', 'ブロッコリー'] }
+        ],
+        substitutes: 'カリフラワーは豚バラ肉・唐辛子と合わせると「干鍋花菜」風に、ブロッコリーはにんじんやむきえびと合わせると彩り豊かになります。',
+        prepTips: '小房に分けてよく洗います。ブロッコリーは塩と油少々を入れた熱湯で40秒下茹ですると色鮮やかに、カリフラワーはそのままじっくり炒めると香ばしくなります。',
+        steps: [
+          'フライパンに油を熱し（豚肉を入れる場合は先に炒めます）、カリフラワー（または下茹でしたブロッコリー）を中強火で2分ほど焼き目がつくまで炒めます。',
+          'にんにく・唐辛子（カリフラワーの場合は豆板醤少々もおすすめ）を加えて香りを出します。',
+          '醤油・オイスターソース・砂糖・塩少々を加え、強火で30秒ほど炒め合わせて完成です。'
+        ]
+      },
+      {
+        id: 'qingchao_douya_jiucai',
+        name: 'もやしとニラのシャキシャキ強火炒め',
+        category: '野菜メイン',
+        time: '6分',
+        requiredGroups: [
+          { label: 'もやし', options: ['もやし'] }
+        ],
+        substitutes: 'ニラや春雨、にんじん、豚肉の細切りを加えるとさらに食べ応えがアップします。',
+        prepTips: 'もやしは洗ったあとザルに上げてしっかり水気を切ります。強火で短時間に仕上げ、仕上げに酢を少し入れると水気が出ずシャキッとします。',
+        steps: [
+          '少し多めの油を熱したフライパンでにんにく・ねぎ・唐辛子を炒めます（お肉を入れる場合はここで炒めます）。',
+          '強火にして水気を切ったもやしを一気に入れ、鍋肌から酢大さじ1を回し入れて30秒手早く炒めます。',
+          'ニラ（あれば）を加え、醤油・塩・鶏がらスープの素少々を加えて強火で15秒炒め合わせたら完成です。'
+        ]
+      },
+      {
+        id: 'qingchao_ou_kugua_sigua',
+        name: '旬野菜のあっさり炒め（れんこん・ゴーヤ・ズッキーニ等）',
+        category: '野菜メイン',
+        time: '10分',
+        requiredGroups: [
+          { label: 'れんこん・ゴーヤ・ズッキーニ等', options: ['れんこん', 'ゴーヤ', 'へちま', '冬瓜', 'ズッキーニ', 'マコモダケ', 'アスパラガス', 'オクラ', 'かぼちゃ', '里芋'] }
+        ],
+        substitutes: 'ゴーヤやへちまは卵と炒めるのが定番。れんこんやアスパラはにんじん・お肉と合わせると食感良く仕上がります。',
+        prepTips: 'れんこんは薄切りにして酢水にさらします。ゴーヤはワタを取って薄切りにし、塩を揉み込んで5分置き水気を絞ると苦味が和らぎます。',
+        steps: [
+          'フライパンに油を熱してにんにくを炒めます（卵と合わせる場合は先に卵をふんわり炒めて取り出します）。',
+          '下ごしらえした野菜を入れ、中強火で1分半〜2分ほど火が通るまで炒めます（冬瓜・かぼちゃ・里芋は水を少し加えて2分蒸し焼きにします）。',
+          '塩・オイスターソース（または醤油）・砂糖少々で味を調え、卵を戻し入れてサッと混ぜたら完成です。'
+        ]
+      },
+      {
+        id: 'basi_hongshu',
+        name: '大学いも風・さつまいもの飴絡め（抜絲紅薯）',
+        category: '野菜メイン',
+        time: '15分',
+        requiredGroups: [
+          { label: 'さつまいも', options: ['さつまいも'] }
+        ],
+        substitutes: '飴を絡めて中華風大学いもにするほか、スティック状に揚げて塩・クミンを振ればスパイシーポテトにもなります。',
+        prepTips: 'さつまいもは皮をむいて乱切りにし、キッチンペーパーで水気をよく拭き取ります。',
+        steps: [
+          'フライパンに油を熱し、さつまいもを中弱火で5分ほど、竹串がスッと通り表面がカリッときつね色になるまで揚げ焼きにして取り出します。',
+          '油を拭き取ったフライパンに砂糖大さじ4と水大さじ2を入れ、弱火で絶えず混ぜながら煮詰めます。',
+          '大きな泡が細かい泡に変わり、琥珀色（べっこう飴色）になったらすぐに火を止め、さつまいもを入れて手早く全体に絡めます。',
+          '薄く油を塗ったお皿に盛り付ければ、外はカリッと中はホクホクの大学いもの完成です。'
+        ]
+      },
+
+      // ================= ご飯・麺類 =================
+      {
+        id: 'dan_chaofan',
+        name: 'パラパラ五目卵チャーハン',
+        category: 'ご飯・麺類',
+        time: '10分',
+        requiredGroups: [
+          { label: 'ご飯', options: ['ご飯'] },
+          { label: '卵', options: ['卵'] }
+        ],
+        substitutes: 'にんじん、きゅうり、玉ねぎ、むきえび、レタスなど冷蔵庫の余り野菜を細かく刻んで加えると栄養満点です。',
+        prepTips: '冷やご飯を使う場合は軽く温めてほぐしておきます（卵黄だけを先にご飯に混ぜておくと「黄金チャーハン」になります）。',
+        steps: [
+          '多めの油を熱したフライパンに溶き卵を流し入れ、手早くかき混ぜて炒り卵にし一度取り出します（えびやにんじんを入れる場合はここで炒めます）。',
+          '油を少し足し、ご飯を入れて中強火で2〜3分、お玉の背でほぐしながらご飯がパラパラに跳ねるまでしっかり炒めます。',
+          '卵と具材を戻し入れ、鍋肌から醤油大さじ1（または塩・白こしょう）を回し入れて香ばしく炒めます。',
+          '刻みねぎをたっぷり加え、強火で15秒炒め合わせたら完成です。'
+        ]
+      },
+      {
+        id: 'jiachang_chaomian',
+        name: '具だくさん中華風焼きそば',
+        category: 'ご飯・麺類',
+        time: '12分',
+        requiredGroups: [
+          { label: '乾麺・中華麺・インスタント麺', options: ['乾麺・中華麺', 'インスタント麺'] },
+          { label: 'キャベツ・青梗菜・もやし・卵', options: ['キャベツ', '小松菜・青梗菜', 'もやし', '卵', '豚ロース細切り'] }
+        ],
+        substitutes: 'キャベツ、もやし、にんじん、卵、豚肉など何でも合う万能ランチ・夜食メニューです。',
+        prepTips: '乾麺は表示時間より1分短く硬めに茹で、冷水で締めて水気を切り、サラダ油少々を絡めておくとくっつきません。',
+        steps: [
+          'フライパンに油を熱し、溶き卵を炒めて取り出します（お肉を入れる場合はここで炒めます）。',
+          'ねぎ・にんにくを炒め、キャベツやもやしなどの野菜を加えて強火で40秒サッと炒めます。',
+          '麺と卵を入れ、醤油大さじ2・たまり醤油少々・オイスターソース大さじ1・砂糖少々を加えます。',
+          '菜箸とフライ返しを使って強火で1分ほどほぐしながら炒め合わせ、香ばしく仕上げます。'
+        ]
+      },
+      {
+        id: 'fanqie_roumo_yimian',
+        name: 'トマトミートソースパスタ・黒こしょう牛肉パスタ',
+        category: 'ご飯・麺類',
+        time: '20分',
+        requiredGroups: [
+          { label: 'パスタ', options: ['パスタ'] },
+          { label: 'トマト・玉ねぎ・ひき肉・牛肉', options: ['トマト', '玉ねぎ', '豚ひき肉', '牛ロース薄切り', '牛角切り・サイコロ'] }
+        ],
+        substitutes: 'ひき肉とトマトなら王道のミートソースパスタに、牛薄切り肉と玉ねぎ・ピーマンなら中華風黒こしょう牛肉パスタにアレンジできます。',
+        prepTips: '塩を入れた熱湯でパスタを表示時間通り茹で、茹で汁をお玉1杯分取っておきます。',
+        steps: [
+          'フライパンに油（またはバター）を熱し、みじん切りの玉ねぎとにんにくを炒め、ひき肉を加えてパラパラになるまで炒めます（牛肉薄切りの場合はサッと炒めて一度取り出します）。',
+          '刻んだトマトを加えて弱火で煮詰め、ケチャップ大さじ2・醤油大さじ1・砂糖少々・黒こしょう・塩を加えて3分ほど煮込みます。',
+          '茹で上がったパスタと茹で汁少々を加え、中火でソースをよく絡めます。',
+          'お皿に盛り付け、仕上げに粗挽き黒こしょうを挽けば完成です。'
+        ]
+      }
+    ];
+
+    /**
+     * 3. アプリケーション状態管理
+     */
+    const state = {
+      selectedIngredients: new Set(),
+      activeTab: 'all'
+    };
+
+    /**
+     * 4. 初期描画処理
+     */
+    function initApp() {
+      loadCustomRecipes(); // ローカルストレージからマイレシピを読み込み
+      renderCategoryNav();
+      renderIngredientGroups();
+      bindEvents();
+      evaluateAndRenderRecipes();
+    }
+
+    // localStorage からユーザー追加レシピを読み込んで統合
+    function loadCustomRecipes() {
+      const saved = localStorage.getItem('my_custom_recipes_ja');
+      if (saved) {
+        try {
+          const customArr = JSON.parse(saved);
+          RECIPES.push(...customArr);
+        } catch (e) {
+          console.error("マイレシピの読み込みに失敗しました", e);
+        }
+      }
+    }
+
+    function renderCategoryNav() {
+      const nav = document.getElementById('categoryNav');
+      nav.innerHTML = INGREDIENT_GROUPS.map(group => `
+        <a href="#group-${group.id}" class="px-3 py-1.5 rounded-full bg-white border border-kitchen-border text-kitchen-text hover:border-kitchen-primary hover:text-kitchen-primary transition-colors flex items-center gap-1.5 shadow-2xs">
+          <span>${group.icon}</span>
+          <span class="font-medium">${group.name}</span>
+          <span id="badge-${group.id}" class="hidden px-1.5 py-0.2 text-[11px] font-bold rounded-full bg-kitchen-primary text-white">0</span>
+        </a>
+      `).join('');
+    }
+
+    function renderIngredientGroups() {
+      const container = document.getElementById('ingredientGroupsContainer');
+      container.innerHTML = INGREDIENT_GROUPS.map(group => `
+        <div id="group-${group.id}" class="bg-white rounded-3xl border border-kitchen-border p-3.5 sm:p-5 shadow-2xs scroll-mt-32">
+          <div class="flex flex-wrap items-center justify-between gap-2 pb-2.5 mb-3 border-b border-kitchen-border/70">
+            <div class="flex items-center gap-2">
+              <span class="text-xl sm:text-2xl">${group.icon}</span>
+              <div>
+                <h2 class="text-base sm:text-lg font-bold text-kitchen-text leading-tight">${group.name}</h2>
+                <p class="text-xs text-kitchen-muted">${group.desc}</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <button type="button" onclick="toggleGroupAll('${group.id}', true)" class="text-xs font-medium px-2.5 py-1 rounded-lg bg-kitchen-bg hover:bg-kitchen-softGreen text-kitchen-primary transition-colors cursor-pointer">
+                このカテゴリを全選択
+              </button>
+              <button type="button" onclick="toggleGroupAll('${group.id}', false)" class="text-xs font-medium px-2.5 py-1 rounded-lg bg-kitchen-bg hover:bg-gray-200/70 text-kitchen-muted transition-colors cursor-pointer">
+                クリア
+              </button>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap gap-1.5 sm:gap-2">
+            ${group.items.map((item, idx) => {
+              const inputId = `ing-${group.id}-${idx}`;
+              return `
+                <label for="${inputId}" class="relative cursor-pointer select-none inline-flex">
+                  <input
+                    type="checkbox"
+                    id="${inputId}"
+                    value="${item}"
+                    data-group="${group.id}"
+                    class="ingredient-checkbox sr-only"
+                    onchange="handleIngredientToggle(this)"
+                  />
+                  <div class="ingredient-pill inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-kitchen-border bg-kitchen-bg/60 hover:bg-kitchen-softGreen/50 hover:border-kitchen-primary/40 transition-all duration-150">
+                    <span class="custom-box w-3.5 h-3.5 rounded-sm border-2 border-gray-400 bg-white flex items-center justify-center shrink-0 transition-colors">
+                      <svg class="w-2.5 h-2.5 text-kitchen-primary opacity-0 scale-75 transition-all" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </span>
+                    <span class="ing-name-base text-xs sm:text-sm font-medium">${item}</span>
+                  </div>
+                </label>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function handleIngredientToggle(checkbox) {
+      const value = checkbox.value;
+      if (checkbox.checked) {
+        state.selectedIngredients.add(value);
+      } else {
+        state.selectedIngredients.delete(value);
+      }
+      updateSelectedUI();
+      evaluateAndRenderRecipes();
+    }
+
+    function toggleGroupAll(groupId, shouldSelect) {
+      const checkboxes = document.querySelectorAll(`input.ingredient-checkbox[data-group="${groupId}"]`);
+      checkboxes.forEach(cb => {
+        cb.checked = shouldSelect;
+        if (shouldSelect) {
+          state.selectedIngredients.add(cb.value);
+        } else {
+          state.selectedIngredients.delete(cb.value);
+        }
+      });
+      updateSelectedUI();
+      evaluateAndRenderRecipes();
+    }
+
+    function updateSelectedUI() {
+      const count = state.selectedIngredients.size;
+      document.getElementById('selectedCount').textContent = count;
+
+      INGREDIENT_GROUPS.forEach(group => {
+        let groupCount = 0;
+        group.items.forEach(item => {
+          if (state.selectedIngredients.has(item)) groupCount++;
+        });
+        const badge = document.getElementById(`badge-${group.id}`);
+        if (groupCount > 0) {
+          badge.textContent = groupCount;
+          badge.classList.remove('hidden');
+        } else {
+          badge.classList.add('hidden');
+        }
+      });
+
+      const preview = document.getElementById('selectedTagsPreview');
+      if (count === 0) {
+        preview.innerHTML = '<span>食材が未選択です。上のリストから選んでください...</span>';
+      } else {
+        const itemsArr = Array.from(state.selectedIngredients);
+        preview.innerHTML = itemsArr.map(item => `
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-kitchen-softGreen text-kitchen-primary font-medium whitespace-nowrap">
+            ${item}
+            <button type="button" onclick="removeIngredient('${item}')" class="hover:text-red-600 ml-0.5 font-bold cursor-pointer" title="削除">&times;</button>
+          </span>
+        `).join('');
+      }
+    }
+
+    function removeIngredient(itemName) {
+      state.selectedIngredients.delete(itemName);
+      const checkboxes = document.querySelectorAll('input.ingredient-checkbox');
+      checkboxes.forEach(cb => {
+        if (cb.value === itemName) cb.checked = false;
+      });
+      updateSelectedUI();
+      evaluateAndRenderRecipes();
+    }
+
+    function evaluateAndRenderRecipes() {
+      const selected = state.selectedIngredients;
+      const hasSelection = selected.size > 0;
+
+      const evaluatedList = RECIPES.map(recipe => {
+        const totalSlots = recipe.requiredGroups.length;
+        let matchedSlots = 0;
+        const missingLabels = [];
+
+        recipe.requiredGroups.forEach(group => {
+          const hitOptions = group.options.filter(opt => selected.has(opt));
+          if (hitOptions.length > 0) {
+            matchedSlots++;
+          } else {
+            missingLabels.push(group.label);
+          }
+        });
+
+        let matchType = 'none';
+        if (hasSelection) {
+          if (matchedSlots === totalSlots) {
+            matchType = 'exact';
+          } else if (matchedSlots > 0) {
+            matchType = 'partial';
+          }
+        }
+
+        return {
+          ...recipe,
+          totalSlots,
+          matchedSlots,
+          missingLabels,
+          matchType
+        };
+      });
+
+      const exactRecipes = evaluatedList.filter(r => r.matchType === 'exact');
+      const partialRecipes = evaluatedList.filter(r => r.matchType === 'partial');
+      const allCombined = hasSelection ? [...exactRecipes, ...partialRecipes] : evaluatedList;
+
+      document.getElementById('resultSummaryBadge').textContent = `全 ${evaluatedList.length} 品の厳選レシピ`;
+      document.getElementById('countAll').textContent = allCombined.length;
+      document.getElementById('countExact').textContent = exactRecipes.length;
+      document.getElementById('countPartial').textContent = partialRecipes.length;
+
+      let displayList = allCombined;
+      if (state.activeTab === 'exact') displayList = exactRecipes;
+      else if (state.activeTab === 'partial') displayList = partialRecipes;
+
+      renderRecipeCards(displayList, hasSelection);
+    }
+
+    function renderRecipeCards(recipes, hasSelection) {
+      const grid = document.getElementById('recipeGrid');
+      const emptyState = document.getElementById('emptyResultState');
+
+      if (recipes.length === 0) {
+        grid.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+      grid.innerHTML = recipes.map(recipe => {
+        let statusBadgeHTML = '';
+        let cardBorderClass = 'border-kitchen-border hover:border-kitchen-primary/60';
+
+        if (hasSelection) {
+          if (recipe.matchType === 'exact') {
+            statusBadgeHTML = `<span class="px-2.5 py-0.5 text-xs font-bold rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">✅ 食材OK</span>`;
+            cardBorderClass = 'border-emerald-300 bg-emerald-50/20 hover:border-emerald-500';
+          } else if (recipe.matchType === 'partial') {
+            statusBadgeHTML = `<span class="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-orange-100 text-orange-800 border border-orange-200">🔸 あと ${recipe.missingLabels.length} 品</span>`;
+          }
+        } else {
+          statusBadgeHTML = `<span class="px-2.5 py-0.5 text-xs font-medium rounded-full bg-kitchen-bg text-kitchen-muted">⏱️ ${recipe.time}</span>`;
+        }
+
+        return `
+          <article onclick="openRecipeModal('${recipe.id}')" class="group cursor-pointer rounded-2xl border ${cardBorderClass} bg-white p-4 sm:p-5 shadow-2xs hover:shadow-md transition-all duration-200 flex flex-col justify-between">
+            <div>
+              <div class="flex items-start justify-between gap-2 mb-2">
+                <span class="text-xs font-medium text-kitchen-primary bg-kitchen-softGreen px-2 py-0.5 rounded-md">${recipe.category}</span>
+                ${statusBadgeHTML}
+              </div>
+              <h3 class="text-base sm:text-lg font-bold text-kitchen-text group-hover:text-kitchen-accent transition-colors flex items-start justify-between gap-2">
+                <span>${recipe.name}</span>
+                <span class="text-xs font-normal text-kitchen-muted group-hover:text-kitchen-accent flex items-center gap-0.5 shrink-0 mt-1">
+                  作り方 &rarr;
+                </span>
+              </h3>
+            </div>
+            <div class="mt-4 pt-3 border-t border-kitchen-border/60 text-xs text-kitchen-muted line-clamp-1">
+              <span class="font-medium text-kitchen-text">代用・アレンジ：</span>${recipe.substitutes}
+            </div>
+          </article>
+        `;
+      }).join('');
+    }
+
+    function openRecipeModal(recipeId) {
+      const recipe = RECIPES.find(r => r.id === recipeId);
+      if (!recipe) return;
+
+      document.getElementById('modalTitle').textContent = recipe.name;
+      document.getElementById('modalCategoryBadge').textContent = recipe.category;
+      document.getElementById('modalTimeBadge').textContent = `⏱️ 約 ${recipe.time}`;
+
+      const reqContainer = document.getElementById('modalRequiredIngredients');
+      reqContainer.innerHTML = recipe.requiredGroups.map(group => {
+        const hit = group.options.some(opt => state.selectedIngredients.has(opt));
+        return hit
+          ? `<span class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-kitchen-primary text-white">✓ ${group.label}（選択済み）</span>`
+          : `<span class="px-3 py-1.5 rounded-xl text-xs font-medium bg-kitchen-bg text-kitchen-text border border-kitchen-border">${group.label}</span>`;
+      }).join('');
+
+      document.getElementById('modalSubstitutes').textContent = recipe.substitutes;
+      document.getElementById('modalPrepTips').textContent = recipe.prepTips;
+
+      const stepsContainer = document.getElementById('modalSteps');
+      stepsContainer.innerHTML = recipe.steps.map((step, idx) => `
+        <li class="flex items-start gap-3 p-3 rounded-2xl bg-kitchen-bg/60 border border-kitchen-border/60">
+          <span class="w-6 h-6 rounded-full bg-kitchen-accent text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">${idx + 1}</span>
+          <p class="text-sm text-kitchen-text leading-relaxed">${step}</p>
+        </li>
+      `).join('');
+
+      const modal = document.getElementById('recipeModal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeRecipeModal() {
+      const modal = document.getElementById('recipeModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    // マイレシピ追加モーダル制御
+    function closeAddModal() {
+      const modal = document.getElementById('addRecipeModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function handleCustomRecipeSubmit(e) {
+      e.preventDefault();
+      const name = document.getElementById('customName').value.trim();
+      const category = document.getElementById('customCategory').value;
+      const time = document.getElementById('customTime').value.trim();
+      const rawIngs = document.getElementById('customIngredients').value.trim();
+      const substitutes = document.getElementById('customSubstitutes').value.trim() || '特になし';
+      const prepTips = document.getElementById('customPrepTips').value.trim() || '通常通り下ごしらえしてください';
+      const rawSteps = document.getElementById('customSteps').value.trim();
+
+      const ingredientsArr = rawIngs.split(/[,，、]/).map(i => i.trim()).filter(Boolean);
+      const stepsArr = rawSteps.split('\n').map(s => s.trim()).filter(Boolean);
+
+      const newRecipe = {
+        id: 'custom_' + Date.now(),
+        name,
+        category,
+        time,
+        requiredGroups: ingredientsArr.map(ing => ({ label: ing, options: [ing] })),
+        substitutes,
+        prepTips,
+        steps: stepsArr
+      };
+
+      // 1. localStorage に保存
+      let customArr = JSON.parse(localStorage.getItem('my_custom_recipes_ja') || '[]');
+      customArr.push(newRecipe);
+      localStorage.setItem('my_custom_recipes_ja', JSON.stringify(customArr));
+
+      // 2. メモリに追加して再描画
+      RECIPES.push(newRecipe);
+      evaluateAndRenderRecipes();
+      
+      // 3. モーダルを閉じてフォームをリセット
+      closeAddModal();
+      document.getElementById('addRecipeForm').reset();
+      showToast(`マイレシピ「${name}」を保存しました！`);
+    }
+
+    function showToast(msg) {
+      document.getElementById('toastMessage').textContent = msg;
+      document.getElementById('toastBanner').classList.remove('hidden');
+    }
+    function hideToast() {
+      document.getElementById('toastBanner').classList.add('hidden');
+    }
+
+    function bindEvents() {
+      document.getElementById('btnGenerateMenu').addEventListener('click', () => {
+        evaluateAndRenderRecipes();
+        document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth' });
+      });
+
+      document.getElementById('btnAddRecipeModal').addEventListener('click', () => {
+        const modal = document.getElementById('addRecipeModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      });
+
+      document.getElementById('btnPreset').addEventListener('click', () => {
+        const presets = ['豚ロース薄切り', 'むきえび', '片栗粉', '砂糖', '米酢', '卵', 'ピーマン・ししとう'];
+        presets.forEach(p => state.selectedIngredients.add(p));
+        document.querySelectorAll('input.ingredient-checkbox').forEach(cb => {
+          if (presets.includes(cb.value)) cb.checked = true;
+        });
+        updateSelectedUI();
+        evaluateAndRenderRecipes();
+        showToast('唐揚げや甘酢炒めが作れる定番ストック食材を選択しました！');
+      });
+
+      document.getElementById('btnSelectAll').addEventListener('click', () => {
+        document.querySelectorAll('input.ingredient-checkbox').forEach(cb => {
+          cb.checked = true;
+          state.selectedIngredients.add(cb.value);
+        });
+        updateSelectedUI();
+        evaluateAndRenderRecipes();
+      });
+
+      document.getElementById('btnClearAll').addEventListener('click', () => {
+        state.selectedIngredients.clear();
+        document.querySelectorAll('input.ingredient-checkbox').forEach(cb => cb.checked = false);
+        updateSelectedUI();
+        evaluateAndRenderRecipes();
+      });
+
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.activeTab = btn.dataset.tab;
+          document.querySelectorAll('.tab-btn').forEach(b => {
+            b.className = b === btn
+              ? 'tab-btn px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-lg bg-white text-kitchen-primary shadow-sm transition-all cursor-pointer'
+              : 'tab-btn px-3.5 py-1.5 text-xs sm:text-sm font-medium rounded-lg text-kitchen-muted hover:text-kitchen-text transition-all cursor-pointer';
+          });
+          evaluateAndRenderRecipes();
+        });
+      });
+    }
+
+    window.addEventListener('DOMContentLoaded', initApp);
+  </script>
+</body>
+</html>
